@@ -1,0 +1,59 @@
+---
+title: "Homework 1"
+author: "Eric Boxer"
+date: 
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
+                      message = FALSE)
+```
+
+Note: Grading is based both on your graphs and verbal explanations. Follow all best practices as discussed in class.
+
+Read *Graphical Data Analysis with R*, Ch. 3
+
+### 1. Salary
+[15 points]
+
+a) Draw multiple boxplots, by year, for the `Salaries` variable in *Employee.csv* (Available in the Data folder in the Files section of CourseWorks, original source: https://catalog.data.gov/dataset/employee-compensation-53987). How do the distributions differ by year?
+
+b) Draw histograms, faceted by year, for the same data. What additional information do the histograms provide?
+
+c) Plot overlapping density curves of the same data, one curve per year, on a single set of axes. Each curve should be a different color. What additional information do you learn? 
+
+d) Sum up the results of a), b) and c): what kinds of questions, specific to this dataset, would be best answered about the data by each of the three graphical forms?
+
+### 2. Overtime
+
+[10 points]
+
+a) Draw multiple horizontal boxplots, grouped by `Organization Group` for the `Overtime` variable in  *Employee.csv* The boxplots should be sorted by group median.  Why aren't the boxplots particularly useful?
+
+b) Either subset the data or choose another graphical form (or both) to display the distributions of `Overtime` by `Organization Group` in a more meaningful way. Explain how this form improves on the plots in part a).
+
+### 3. Boundaries
+
+[10 points]
+
+a) Find or create a small dataset (< 100 observations) for which right open and right closed histograms for the same parameters are not identical. Display the full dataset (that is, show the numbers) and the plots of the two forms.
+
+b) Adjust parameters--the same for both--so that the right open and right closed versions become identical. Explain your strategy.
+
+### 4. Beavers
+
+[10 points]
+
+a) Use QQ (quantile-quantile) plots with theoretical normal lines to compare `temp` for the built-in *beaver1* and *beaver2* datasets.  Which appears to be more normally distributed?
+
+b) Draw density histograms with density curves and theoretical normal curves overlaid. Do you get the same results as in part a)?
+
+c) Perform the Shapiro-Wilk test for normality using the `shapiro.test()` function. How do the results compare to parts a) and b)? 
+
+
+### 5. Doctors
+
+[5 points]
+
+Draw a histogram of the number of deaths attributed to coronary artery disease among doctors in the *breslow* dataset (**boot** package). *(Hint: think carefully about the form in which you are receiving the data.)*
