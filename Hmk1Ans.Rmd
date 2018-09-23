@@ -1,0 +1,235 @@
+---
+title: "Homework 1"
+author: "Eric Boxer"
+date: Sept 22, 2018
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE,
+                      message = FALSE)
+library(tidyverse)
+library(boot)
+library(zoo)
+```
+### 1. Salary
+a) How do the distributions differ by year?
+```{r}
+Employee_Compensation <- read_csv("resources/Employee_Compensation.csv")
+ggplot(Employee_Compensation,
+       mapping = aes(x = Year, y = Salaries, group = Year)) +
+  geom_boxplot() +
+  coord_flip()
+```
+
+From 2013 to 2017, the maximum employee salaries seem to increase. Mean salary and hinge spread look like they may increase slightly. There may be a greater number of high earners, by which I mean those with salaries greater than $200,000, but in a boxplot I cannot be certain about that.
+```{r}
+Employee_Compensation %>%
+  group_by(Year) %>% 
+  summarise(mean = mean(Salaries),
+            iqr = IQR(Salaries),
+            range = max(Salaries) - min(Salaries),
+            high_earners = sum(Salaries > 200000),
+            perc_high_earners = high_earners / n())
+```
+
+Summary statistics support some of the visual findings. An upward trend in mean salary could be the result of automatic wage increases tied to inflation, but the reason behind an increasing number of high earners is non-obvious. Perhaps the total number of employees is going down or staying constant as employees are promoted / earning greater incentives? Is a certain President really "draining the swamp"?
+```{r}
+Employee_Compensation %>% 
+  group_by(Year) %>% 
+  summarise(n = n()) %>% 
+  mutate(perc_change = n / lag(n))
+```
+
+Nope, the total number of employees has increased, go figure.  
+
+b) What additional information do the histograms provide?
+```{r, fig.width=10}
+ggplot(Employee_Compensation, mapping = aes(x = Salaries)) +
+  geom_histogram(binwidth = 20000) +
+  facet_wrap(~ Year, nrow = 1)
+```
+```{r, fig.width=10}
+#Cleaned-up version with modified binwidth and xlim cutting off nonvisible outliers
+ggplot(Employee_Compensation, mapping = aes(x = Salaries)) +
+  geom_histogram(binwidth = 20000) +
+  coord_cartesian(xlim = c(0, 250000)) +
+  facet_wrap(~ Year, nrow = 1) +
+  scale_x_continuous(breaks = c(0, 100000, 200000),
+                     labels = c('0', '100000', '200000'))
+```
+
+Every year exhibits a bimodal distribution of salaries. From 2013 to 2017, there was an increasing trend in the number of employees earning at the lower peak, less than $20,000, and at the higher peak, between $60,000 and $80,000. Also, there looks to be an increasing number of total employees, because as both peaks increase so too does the count of salaries in the trough between them, at about $40,000.
+
+c) What additional information do you learn? 
+```{r}
+df_Emp_Comp <- data.frame(Employee_Compensation$Salaries)
+df_Emp_Comp$Year <- factor(x = Employee_Compensation$Year,
+                           levels = c(2013, 2014, 2015, 2016, 2017))
+ggplot(df_Emp_Comp, mapping = aes(Employee_Compensation.Salaries, group = Year, color = Year)) +
+  geom_density() +
+  xlab('Salaries')
+```
+
+From the histogram, I could observe that the number of employees earning salaries at each of the peaks was slightly increasing year on year. The density plot shows that the *proportion* of employees earning at both peaks has decreased. We can see that this has happened as the distribution of salaries has become more right-skewed. This reflects that the number of high earners has been increasing, as was first suggested by the boxplot in part a).  
+
+d) Sum up the results of a), b) and c): what kinds of questions, specific to this dataset, would be best answered about the data by each of the three graphical forms?  
+
+In summary, from 2013 to 2017, from the graphs we have seen that the proportion of employees earning large salaries (defined as greater than $200,000) has increased. As a result, although the number of employees earning in the two most popular salary ranges ([0, 20,000] and [60,000, 80,000]) has increased, the proportion of federal employees earning in those ranges has decreased. The data has developed a greater right-skew.  
+The boxplot best answers precise questions about the placement of the median and hinges, which have stayed very close over all years. It is also the most explicit in displaying the outlier salaries, but without giving a good sense of the proportion of total salaries that are considered outliers.  
+The histogram is better at answering questions about the shapes of distributions. From boxplots I had no idea that there was a bimodal distribution.  
+The density graph also depicts the distribution shape, but in a more approximate, smoothed form. With the density graph it is feasible to overlay each year onto one figure and from there to make a different kind of direct comparison.  
+
+### 2. Overtime  
+a) Why aren't the boxplots particularly useful?
+```{r, fig.width=10}
+colnames(Employee_Compensation)[4] <- 'Organization_Group'
+Employee_Compensation %>% 
+  ggplot(mapping = aes(x = reorder(Organization_Group, Overtime, FUN = median), y = Overtime)) +
+  geom_boxplot(outlier.shape = 1, outlier.alpha = .5) +
+  xlab('Organization Group') +
+  coord_flip()
+```
+
+The boxplots are not particularly useful because data is concentrated at low values of overtime. The hinge-spreads of the groups with the five lowest median overtime values are all very close to zero. As a result, many of the higher values are treated as outliers and have become indistinguishable, even with a modified marker and alpha.  
+These boxplots do show explicitly that somebody earned a negative overtime value in Community Health. Also, the Public Protection and Public Works, Transportation & Commerce groups display much greater hinge-spread and have more overtime values over $100,000 than other groups.  
+```{r}
+#Number of negative overtime values
+Employee_Compensation %>% 
+  filter(Overtime < 0) %>% 
+  count()
+#Which employees earned the most negative overtime value?
+Employee_Compensation %>% 
+  filter(Overtime < -500) %>% 
+  select(Organization_Group, Department, Overtime)
+```
+
+b) Explain how this form improves on the plots in part a).
+```{r, fig.height=9, fig.width=10}
+Employee_Compensation %>% 
+  group_by(Organization_Group, Department) %>% 
+  ggplot(mapping = aes(x = reorder(Department, Overtime, FUN = median),
+                       y = Overtime,
+                       color = Organization_Group)) +
+  geom_boxplot() +
+  xlab('Department') +
+  coord_flip()
+```
+Now we can see that most of the high Overtime earners are in emergency response departments (Fire, Sheriff, Police) and in utilities department (MTA, Water, Public Health, Parks). This could be rationalized by considering that these are workers who are more likely to be on call for time-sensitive problems and are earning more overtime as a result.  
+```{r, fig.width=10}
+colnames(Employee_Compensation)[10] <- 'Job_Family'
+df_Overtime <- Employee_Compensation %>%
+  group_by(Job_Family) %>% 
+  summarise(med_Overtime = median(Overtime)) %>% 
+  arrange(desc(med_Overtime))
+top_Overtime_Jobs <- df_Overtime$Job_Family[1:10]
+Employee_Compensation %>% 
+  group_by(Organization_Group, Job_Family) %>%
+  filter(Job_Family %in% top_Overtime_Jobs) %>% 
+  ggplot(mapping = aes(x = reorder(Job_Family, Overtime, FUN = median), y = Overtime, color = Organization_Group)) +
+  geom_boxplot() +
+  xlab('Job Family') +
+  coord_flip()
+```
+Public Protection and Public Works, Transportation & Commerce group employees earn the majority of overtime pay in the top 10 job families. Now we can clearly see that workers in jobs categorized as 'Correction and Detention' are also earning high Overtime pay. Maybe this could motivate an exploration of understaffed prisons. Are corrections officers being compelled to work overtime in lieu of proper staffing?  
+
+```{r}
+Employee_Compensation %>% 
+  ggplot(mapping = aes(x = Salaries,
+                       y = Overtime,
+                       color = Organization_Group)) +
+  geom_point(alpha = .1) +
+  coord_cartesian(xlim = c(-1000, 400000),
+                  ylim = c(-1000, 150000)) +
+  guides(color = guide_legend(override.aes = list(alpha = 1)))
+```
+
+The employees earning high overtime pay are not earning the most, but many are earning six-figure salaries in addition to overtime pay. This would serve as evidence against an explanation that the high overtime earners are receiving this compensation in exchange for low salaries.  
+
+### 3. Boundaries
+
+a) Display the full dataset (that is, show the numbers) and the plots of the two forms.
+```{r}
+happiness <- read_csv('resources/happiness.csv')
+happiness$Country <- na.locf(happiness$Country)
+happiness %>% 
+  filter(Gender == 'Both') %>% 
+  print(n = 35)
+happiness %>% 
+  filter(Gender == 'Both') %>% 
+  ggplot(mapping = aes(x = Mean)) +
+  geom_histogram(binwidth = .2, closed = 'left') +
+  ggtitle('Right Open')
+happiness %>% 
+  filter(Gender == 'Both') %>% 
+  ggplot(mapping = aes(x = Mean)) +
+  geom_histogram(binwidth = .2, closed = 'right') +
+  ggtitle('Right Closed')
+```
+
+b) Adjust parameters--the same for both--so that the right open and right closed versions become identical. Explain your strategy.
+```{r}
+happiness %>% 
+  filter(Gender == 'Both') %>% 
+  ggplot(mapping = aes(x = Mean)) +
+  geom_histogram(binwidth = .1, closed = 'left') +
+  ggtitle('Right Open')
+happiness %>% 
+  filter(Gender == 'Both') %>% 
+  ggplot(mapping = aes(x = Mean)) +
+  geom_histogram(binwidth = .1, closed = 'right') +
+  ggtitle('Right Closed')
+```
+
+Happiness has been measured in tenths. If the center of each bin is at the default of 0, an example binwidth of .2 will look like (0.1, 0.3] or [0.1, 0.3), depending on boundary conditions. Both will count different numbers of observations if there are an unequal number of observations of 0.1 and 0.3. As a result of the measurement format, if the boundaries of the bins are equal to the cutoffs between values, then the boundaries will matter. For example, geom_histogram(center = 0.5, binwidth = .1) will also display differently depending on the boundary condition used, because the bins will have boundaries in the tenths place and values will be counted or ignored depending on the conditions. To avoid measurements coinciding with bin boundaries we can select a combination of center and binwidth like center = 0, binwidth = .1. This histogram has example bins (0.05, 0.15] or [0.05, 0.15), depending on boundary conditions, and the condition becomes inconsequential because there are no obervations at five-hundredths of a unit precision and ending in .05.  
+
+### 4. Beavers  
+a) Which appears to be more normally distributed?
+```{r}
+ggplot(beaver1, aes(sample = temp)) +
+  stat_qq() +
+  stat_qq_line()
+ggplot(beaver2, aes(sample = temp)) +
+  stat_qq() +
+  stat_qq_line()
+```
+
+I think that beaver1 is the more normally distributed dataset. Compared to beaver2, beaver1 has middle quantiles which are very close to the theoretical normal line. On the other hand, the quantiles of beaver1 at the left extreme may be further from theoretical normal than that of beaver2.
+
+b) Do you get the same results as in part a)?
+```{r}
+ggplot(beaver1) +
+  geom_histogram(mapping = aes(x = temp, y = ..density..)) +
+  geom_density(mapping = aes(temp)) +
+  stat_function(fun = dnorm,
+                color = 'red',
+                args = list(mean = mean(beaver1$temp),
+                            sd = sd(beaver1$temp)))
+ggplot(beaver2) +
+  geom_histogram(mapping = aes(x = temp, y = ..density..)) +
+  geom_density(mapping = aes(temp)) +
+  stat_function(fun = dnorm,
+                color = 'red',
+                args = list(mean = mean(beaver2$temp),
+                            sd = sd(beaver2$temp)))
+```
+
+The beaver1 data looks to be more normally distributed because it is unimodal about the mean. There are some deviations near the tails, like a bump at about 37.2. The beaver2 distribution is bimodal, with few observations near the mean of the theoretical normal curve. In comparison to beaver1, beaver2 is further from a normal distribution.  
+
+c) Perform the Shapiro-Wilk test for normality using the `shapiro.test()` function. How do the results compare to parts a) and b)? 
+```{r}
+shapiro.test(beaver1$temp)
+shapiro.test(beaver2$temp)
+```
+
+The Shapiro-Wilk test p-value for beaver1 is greater than 0.1 so we cannot reject the null hypothesis that beaver1 is normally distributed. For beaver2, the p-value is approximately 0.00008, less than a reasonable alpha = 0.01 so we can reject the null hypothesis and find that beaver2 does not have a normal distribution.  
+
+### 5. Doctors  
+Draw a histogram of the number of deaths attributed to coronary artery disease among doctors in the *breslow* dataset (**boot** package).
+```{r}
+ggplot(breslow, mapping = aes(x = age, y = y)) +
+  geom_bar(width = 1, stat = 'identity') +
+  ylab('deaths')
+```
+
+The y feature is a count of the number of deaths from coronary artery disease in the age range centered around the age feature. A bar graph of age against y is equivalent to a frequency graph of deaths. 
