@@ -118,9 +118,19 @@ happiness %>%
   ggtitle('Right Closed')
 
 #Doctors - Part 5
-ggplot(breslow, mapping = aes(x = age, y = y)) +
+breslow %>% 
+  filter(smoke == 0) %>% 
+  ggplot(mapping = aes(x = age, y = y)) +
   geom_bar(width = 1, stat = 'identity') +
-  ylab('deaths')
+  ylab('deaths') +
+  ggtitle('Non-smokers')
+
+breslow %>% 
+  filter(smoke == 1) %>% 
+  ggplot(mapping = aes(x = age, y = y)) +
+  geom_bar(width = 1, stat = 'identity') +
+  ylab('deaths') +
+  ggtitle('Smokers')
 
 #Beavers - Part 4
 ggplot(beaver1, aes(sample = temp)) +

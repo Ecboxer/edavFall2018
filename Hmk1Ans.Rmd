@@ -1,6 +1,6 @@
 ---
 title: "Homework 1"
-author: "Eric Boxer"
+author: "Eric Boxer UNI ecb2198"
 date: Sept 22, 2018
 output: pdf_document
 ---
@@ -227,9 +227,19 @@ The Shapiro-Wilk test p-value for beaver1 is greater than 0.1 so we cannot rejec
 ### 5. Doctors  
 Draw a histogram of the number of deaths attributed to coronary artery disease among doctors in the *breslow* dataset (**boot** package).
 ```{r}
-ggplot(breslow, mapping = aes(x = age, y = y)) +
+breslow %>% 
+  filter(smoke == 0) %>% 
+  ggplot(mapping = aes(x = age, y = y)) +
   geom_bar(width = 1, stat = 'identity') +
-  ylab('deaths')
+  ylab('deaths') +
+  ggtitle('Non-smokers')
+
+breslow %>% 
+  filter(smoke == 1) %>% 
+  ggplot(mapping = aes(x = age, y = y)) +
+  geom_bar(width = 1, stat = 'identity') +
+  ylab('deaths') +
+  ggtitle('Smokers')
 ```
 
 The y feature is a count of the number of deaths from coronary artery disease in the age range centered around the age feature. A bar graph of age against y is equivalent to a frequency graph of deaths. 
