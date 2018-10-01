@@ -1,0 +1,270 @@
+---
+title: 'Homework 2'
+author: 'Eric Boxer UNI ecb2198'
+date: 'Sept 30, 2018'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE,
+                      message = FALSE, 
+                      cache = TRUE)
+```
+
+### 1. **Flowers**
+
+(a) Rename the column names and recode the levels of categorical variables to descriptive names. For example, "V1" should be renamed "winters" and the levels to "no" or "yes". Display the full dataset.
+
+```{r}
+library(tidyverse)
+library(cluster)
+colnames(flower)
+colnames(flower) <- c('winters', 'shadow', 'tubers', 'color',
+                      'soil', 'preference', 'height', 'distance')
+flower$winters <- as.character(flower$winters)
+flower$winters[flower$winters == 0] <- 'no'
+flower$winters[flower$winters == 1] <- 'yes'
+flower$shadow <- as.character(flower$shadow)
+flower$shadow[flower$shadow == 0] <- 'no'
+flower$shadow[flower$shadow == 1] <- 'yes'
+flower$tubers <- as.character(flower$tubers)
+flower$tubers[flower$tubers == 0] <- 'no'
+flower$tubers[flower$tubers == 1] <- 'yes'
+flower$color <- as.character(flower$color)
+flower$color <- recode(flower$color, '1' = 'white', '2' = 'yellow', '3' = 'pink', '4' = 'red', '5' = 'blue')
+flower$soil <- as.character(flower$soil)
+flower$soil <- recode(flower$soil, '1' = 'dry', '2' = 'normal', '3' = 'wet')
+flower
+```
+
+(b) Create frequency bar charts for the `color` and `soil` variables, using best practices for the order of the bars.
+
+```{r}
+flower$color <- as.factor(flower$color)
+flower %>%
+  ggplot(aes(x = reorder(color, color, function(x)-length(x)))) + 
+  geom_bar(aes(fill = color), color = '#000000') +
+  scale_fill_manual(values = c('#0000FF', '#FF00FF', '#FF0000', '#FFFFFF', '#FFFF00')) +
+  xlab('color') +
+  ggtitle('flower color')
+flower$soil <- as.factor(flower$soil)
+flower %>% 
+  ggplot(aes(x = reorder(soil, soil, function(x)-length(x)))) +
+  geom_bar(aes(fill = soil)) +
+  scale_fill_brewer() +
+  theme_dark() +
+  xlab('soil') +
+  ggtitle('flower soil saturation')
+```
+
+### 2. Minneapolis
+
+Data: `MplsDemo` dataset in **carData** package
+
+(a) Create a Cleveland dot plot showing estimated median household income by neighborhood.
+```{r}
+library(carData)
+MplsDemo %>% 
+  ggplot(aes(x = reorder(neighborhood, hhIncome), y = hhIncome)) +
+  geom_point(color = 'blue') +
+  coord_flip() +
+  ggtitle('Median household income') +
+  xlab('neightborhood') +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = rel(.75)),
+        panel.grid.major.y = element_line(size = 1.0),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank())
+```
+
+(b) Create a Cleveland dot plot to show percentage of foreign born, earning less than twice the poverty level, and with a college degree in different colors.  Data should be sorted by college degree.
+
+```{r}
+MplsDemo %>% 
+  mutate(foreignBornP = foreignBorn * 100,
+         povertyP = poverty * 100,
+         collegeGradP = collegeGrad * 100) %>% 
+  ggplot() +
+  geom_point(aes(x = foreignBornP, 
+                 y = reorder(neighborhood, collegeGradP),
+                 color = 'Foreign Born'), alpha = .75) +
+  geom_point(aes(x = povertyP,
+                 y = reorder(neighborhood, collegeGradP),
+                 color = 'Poverty'), alpha = .75) +
+  geom_point(aes(x = collegeGradP,
+                 y = reorder(neighborhood, collegeGradP), 
+                 color = 'College Graduation'), alpha = .75) +
+  ylab('neighborhood') +
+  xlab('percentage of population') +
+  ggtitle('Minneapolis demographics') +
+  theme_dark() +
+  theme(axis.text.y = element_text(size = rel(.75))) +
+  scale_color_manual(values = c('#fc8d59',
+                                '#ffffbf',
+                                '#91bfdb'))
+```
+
+(c) What patterns do you observe? What neighborhoods do not appear to follow these patterns?  
+
+From this graph it seems like as college graduation rate increases there are fewer foreign born and impoverished residents. The correlation is broken by a number of neighborhhods: Downtown East and West, Loring Park and Prospect Park are among those with high college graduation and many foreign born residents. Although there also seems to be a correlation between a greater share of foreign born and greater poverty this is broken in Cedar Riverside, Seward, Marcy Holmes and Ventura Village.  
+To get a better grasp on any relationships I tried reordering the plot by foreignBorn and poverty:
+
+```{r}
+MplsDemo %>% 
+  mutate(foreignBornP = foreignBorn * 100,
+         povertyP = poverty * 100,
+         collegeGradP = collegeGrad * 100) %>% 
+  ggplot() +
+  geom_point(aes(x = foreignBornP, 
+                 y = reorder(neighborhood, foreignBornP),
+                 color = 'Foreign Born'), alpha = .75) +
+  geom_point(aes(x = povertyP,
+                 y = reorder(neighborhood, foreignBornP),
+                 color = 'Poverty'), alpha = .75) +
+  geom_point(aes(x = collegeGradP,
+                 y = reorder(neighborhood, foreignBornP), 
+                 color = 'College Graduation'), alpha = .75) +
+  ylab('neighborhood') +
+  xlab('percentage of population') +
+  ggtitle('Minneapolis demographics (by foreignBorn)') +
+  theme_dark() +
+  theme(axis.text.y = element_text(size = rel(.75))) +
+  scale_color_manual(values = c('#fc8d59',
+                                '#ffffbf',
+                                '#91bfdb'))
+MplsDemo %>% 
+  mutate(foreignBornP = foreignBorn * 100,
+         povertyP = poverty * 100,
+         collegeGradP = collegeGrad * 100) %>% 
+  ggplot() +
+  geom_point(aes(x = foreignBornP, 
+                 y = reorder(neighborhood, povertyP),
+                 color = 'Foreign Born'), alpha = .75) +
+  geom_point(aes(x = povertyP,
+                 y = reorder(neighborhood, povertyP),
+                 color = 'Poverty'), alpha = .75) +
+  geom_point(aes(x = collegeGradP,
+                 y = reorder(neighborhood, povertyP), 
+                 color = 'College Graduation'), alpha = .75) +
+  ylab('neighborhood') +
+  xlab('percentage of population') +
+  ggtitle('Minneapolis demographics (by poverty)') +
+  theme_dark() +
+  theme(axis.text.y = element_text(size = rel(.75))) +
+  scale_color_manual(values = c('#fc8d59',
+                                '#ffffbf',
+                                '#91bfdb'))
+```
+
+Ordering by foreignBorn yields a negative correlation with college graduation and a positive with poverty, but I think that the relationship is more tenuous than what the first graph led me to believe.  
+Ordering by poverty does not give me the impression of any relationship with either foreignBorn or college graduation, there is so much variation in both.
+
+```{r}
+mod1 <- lm(collegeGrad~foreignBorn, data = MplsDemo)
+coef(mod1)
+mod2 <- lm(collegeGrad~poverty, data = MplsDemo)
+coef(mod2)
+```
+
+There were negative relationships between college graduation and the foreignBorn and poverty features of the data, but maybe not as strong as the initial plot, or these linear regressions, suggests.
+
+### 3. Taxis
+
+Data: NYC yellow cab rides in June 2018, available here:  
+
+http://www.nyc.gov/html/tlc/html/about/trip_record_data.shtml
+
+It's a large file so work with a reasonably-sized random subset of the data.
+
+Draw four scatterplots of `tip_amount` vs. `far_amount` with the following variations:
+
+(a) Points with alpha blending
+
+```{r}
+yellow_subset %>%
+  ggplot(mapping = aes(tip_amount, fare_amount)) +
+  geom_point(alpha = .25) +
+  xlab('Tip') + ylab('Fare') +
+  ggtitle('NYC Taxi Cabs, June 2018')
+```
+
+(b) Points with alpha blending + density estimate contour lines
+
+```{r}
+yellow_subset %>%
+  ggplot(mapping = aes(tip_amount, fare_amount)) +
+  geom_point(alpha = .25) +
+  geom_density_2d(color = 'blue') +
+  xlab('Tip') + ylab('Fare') +
+  ggtitle('NYC Taxi Cabs, June 2018') +
+  xlim(c(0, 5)) + ylim(c(0, 30))
+```
+
+(c) Hexagonal heatmap of bin counts
+
+```{r}
+yellow_subset %>%
+  ggplot(mapping = aes(tip_amount, fare_amount)) +
+  geom_hex(bins = 25) +
+  xlab('Tip') + ylab('Fare') +
+  ggtitle('NYC Taxi Cabs, June 2018') +
+  xlim(c(0, 13)) + ylim(c(0, 50)) +
+  scale_fill_gradient(low = '#a1d99b', high = '#00441b')
+```
+
+(d) Square heatmap of bin counts 
+
+```{r}
+yellow_subset %>%
+  ggplot(mapping = aes(tip_amount, fare_amount)) +
+  geom_bin2d(bins = 20) +
+  xlab('Tip') + ylab('Fare') +
+  ggtitle('NYC Taxi Cabs, June 2018') +
+  xlim(c(0, 15)) + ylim(c(0, 60)) +
+  scale_fill_gradient(low = '#a1d99b', high = '#00441b')
+```
+
+For all, adjust parameters to the levels that provide the best views of the data.
+
+(e) Describe noteworthy features of the data, using the "Movie ratings" example on page 82 (last page of Section 5.3) as a guide.  
+
+From the two scatter plots we can see that there were many rides with a low fare, < 20, and no tip. There were also many low fare rides with a low tip and where the fare and tip had a linear relationship. This is discrenible from the dark line in the first plot, the density curves in the second, and the high counts of the two heatmaps for low fare and low tip. From the first plot we can see a few outlier rides, with very high fare and zero tip or with high fare and tip. There were no rides with a low fare and a very high tip and many, but not all, of the high fare rides also had a large tip. Most rider are for a low fare and little to no tip, from the density curves.
+
+### 4. Olive Oil
+
+Data: `olives` dataset in **extracat** package
+
+(a) Draw a scatterplot matrix of the eight continuous variables. Which pairs of variables are strongly positively associated and which are strongly negatively associated?
+
+```{r}
+library(extracat)
+pairs(olives[,3:10], pch=21)
+```
+
+The strongly positively associated variables are: palmitic ~ palmitoleic, palmitoleic ~ linoleic. The stronly negatively associated variables are: palmitic ~ oleic, palmitoleic ~ oleic, oleic ~ linoleic.
+
+(b) Color the points by region.  What do you observe?
+
+```{r}
+olives %>% 
+  group_by(Region) %>%
+  summarise(n())
+my_cols <- c('#66c2a5', '#fc8d62', '#8da0cb')
+pairs(olives[,3:10], pch=21, col = my_cols[olives$Region],
+      lower.panel = NULL)
+legend("bottomleft",
+       fill = unique(my_cols[olives$Region]),
+       legend = c(levels(olives$Region)))
+```
+
+Olives from the North generally have higher amounts of each of the fatty acids. In particular olives from the North apparently have universally greater levels of elcosenoic, while Sardinian and Southern olives have almost none. There may be something going on with the measurements for Southern olives because the amounts of linolenic and arachidic fatty acids look like they have been rounded, particularly for low amounts but also for some higher amounts. Southern and Sardinian olives have very similar levels of palmitic and palmitoleic fatty acids. Southern olives have more oleic than Sardinian but the reverse holds for linoleic.
+
+### 5. Wine
+
+Data: `wine` dataset in **pgmm** package
+
+(Recode the `Type` variable to descriptive names.)
+
+(a) Use parallel coordinate plots to explore how the variables separate the wines by `Type`. Present the version that you find to be most informative. You do not need to include all of the variables.
+
+(b) Explain what you discovered.
