@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+	<meta charset="utf-8">
+	<title>Mosaic Plot Demo</title>
+	<script src="https://d3js.org/d3.v5.min.js" charset="utf-8"></script>
+	<link rel="stylesheet" type="text/css" href="style.css">
+    </head>
+    <body>
+	<p id="name"><b>Mosaic Plot Demonstration</b></p>
+	<p>Mosaic plots are useful for visualizing categorical data. They encode in area the frequencies with which certain features appear together.</p>
+	<p>Try splitting the mosaic below, choose a feature (hair color, eye color, sex) and a direction to split on (vertical or horizontal). You are not permitted to split on one feature multiple times.</p>
+	<p>Keep in mind that when depicting a relationship between features you split upon the dependent variable last. For example, if we wanted to look at the proportions of hair color (dependent variable) for the sexes (independent variable) we could first select <i>Sex Vertical</i> and then <i>Hair Horizontal</i>.
+	<div id="option">
+	    <input id="reset" name="resetButton" type="button" value="Reset Area"/><br>
+	    <input id="updateHairV" class="checkHair" name="updateHairV" type="checkbox" value="Hair Vertical"/><label for="updateHairV">Hair Vertical</label>
+	    <input id="updateHairH" class="checkHair" name="updateHairH" type="checkbox" value="Hair Horizontal"/><label for="updateHairH">Hair Horizontal</label><br>
+	    <input id="updateEyeV" class="checkEye" name="updateEyeV" type="checkbox" value="Eye Vertical"/><label for="updateEyeV">Eye Vertical</label>
+	    <input id="updateEyeH" class="checkEye" name="updateEyeH" type="checkbox" value="Eye Horizontal"/><label for="updateEyeH">Eye Horizontal</label><br>
+	    <input id="updateSexV" class="checkSex" name="updateSexV" type="checkbox" value="Sex Vertical"/><label for="updateSexH">Sex Vertical</label>
+	    <input id="updateSexH" class="checkSex" name="updateSexH" type="checkbox" value="Sex Horizontal"/><label for="updateSexH">Sex Horizontal</label>
+	</div>
+	<div id="chart"></div>
+	<div id="data-table"></div>
+	<script type="text/javascript">
+
+	 //Display specs
+	 const margin = {top: 50, right: 50, bottom: 50, left: 50};
+	 const width = Math.min(window.innerWidth, 900) - margin.left - margin.right;
+	 const height = Math.min(window.innerHeight, 600) - margin.top - margin.bottom;
+	 const innerPad = width / 50;
+
+	 //Create container
+	 const container = d3.select('#chart')
+			     .append('svg')
+			     .attr('width', width + margin.left + margin.right)
+			     .attr('height', height + margin.top + margin.bottom)
+			     .append('g')
+			     .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+	 //Create initial mosaic area
+	 const mosaicInit = container.append('rect')
+				     .attr('class', 'tile')
+				     .attr('id', 'init')
+				     .attr('x', 0)
+				     .attr('y', 0)
+				     .attr('width', width - innerPad)
+				     .attr('height', height - innerPad)
+				     .attr('opacity', .75);
+
+	 //Uppercase first letter
+	 function toUpper(string) {
+	     return string[0].toUpperCase() + string.slice(1);
+	 };
+	 
+	 //Draw the data table from neatly labelled data
+	 function tabulate(data, columns) {
+
+	     const table = d3.select('#data-table').append('table');
+	     const thead = table.append('thead');
+	     const tbody = table.append('tbody');
+
+	     //append header row
+	     thead.append('tr')
+		  .selectAll('th')
+		  .data(columns).enter()
+		  .append('th')
+		  .text(column => toUpper(column));
+
+	     //create row for each Object
+	     const rows = tbody.selectAll('tr')
+			       .data(data)
+			       .enter()
+			       .append('tr');
+
+	     //create a cell in each row for each column
+	     const cells = rows.selectAll('td')
+			       .data(function (row) {
+				   return columns.map(function (column) {
+				       return {column: column, value: row[column]};
+				   });
+			       })
+			       .enter()
+			       .append('td')
+			       .text(d => d.value);
+
+	     return table;
+	 };
+
+	 //Massage data into form for tabulate
+	 function tabMass(data, label1, label2) {
+	     let a = [];
+	     for (f1 in Object.keys(data)) {
+		 for (f2 in data[Object.keys(data)[f1]]) {
+		     let obj = {};
+		     obj[label1] = Object.keys(data)[f1];
+		     obj[label2] = f2;
+		     obj['Freq'] = data[Object.keys(data)[f1]][f2];
+		     a.push(obj);
+		 };
+	     };
+	     return a;
+	 };
+
+	 //Hard coded feature values
+	 const Hair = ['Black', 'Brown', 'Red', 'Blonde'];
+	 const Eye = ['Brown', 'Blue', 'Hazel', 'Green'];
+	 const Sex = ['Male', 'Female'];
+
+	 //Colors to coincide with feature values
+	 const hairColor = {'Black': '#000',
+			    'Brown': '#591600',
+			    'Red': '#FF0000',
+			    'Blonde': '#FFdF00'}
+	 const eyeColor = {'Brown': '#591600',
+			   'Blue': '#007FFF',
+			   'Hazel': '#4C5927',
+			   'Green': '#00E700'}
+	 const sexColor = {'Male': '#64D8FF',
+			   'Female': '#FF64D8'}
+	 
+	 d3.csv('HairEyeColor.csv', function (d) {
+	     return {
+		 Hair: d.Hair,
+		 Eye: d.Eye,
+		 Sex: d.Sex,
+		 Freq: +d.Freq
+	     };
+	 }).then(function (data) {
+
+	     tabulate(data, ['Hair', 'Eye', 'Sex', 'Freq']);
+
+	     //Hard coded total frequency
+	     const N = 592
+	     
+	     //Declare initial window based scales
+	     let xScale = d3.scaleLinear()
+			    .domain([0, N])
+			    .rangeRound([0, width - innerPad]);
+
+	     let yScale = d3.scaleLinear()
+			    .domain([0, N])
+			    .rangeRound([0, height - innerPad]);
+
+	     //unique items of an object
+	     function getUniqueItems(object) {
+		 return object.filter((e, i, self) => {
+		     return self.indexOf(e) === i;
+		 });
+	     };
+
+	     //Get values from depth = 1 Object
+	     function getValues1 (object) {
+		 let a = [];
+		 for (let k in object) {
+		     a.push(object[k]);
+		 };
+		 return a;
+	     };
+	     
+	     //Get values from depth = 2 Object
+	     function getValues2 (object) {
+		 let a = [];
+		 for (let k in object) {
+		     let b = [];
+		     for (let k2 in object[k]) {
+			 b.push(object[k][k2]);
+		     };
+		     let obj = {};
+		     obj[k] = b;
+		     a.push(obj);
+		 };
+		 return a;
+	     };
+
+	     //Get values from depth = 3 Object
+	     //***************WIP****************** copied depth = 2
+	     function getValues3 (object) {
+		 let a = [];
+		 for (let k in object) {
+		     let b = [];
+		     for (let k2 in object[k]) {
+			 b.push(object[k][k2]);
+		     };
+		     let obj = {};
+		     obj[k] = b;
+		     a.push(obj);
+		 };
+		 return a;
+	     };
+	     
+	     //create key function for freqByFeature functions
+	     function forge(feature) {
+		 if (feature === 'Hair') { return d => d.Hair; }
+		 else if (feature === 'Eye') { return d => d.Eye; }
+		 else if (feature === 'Sex') { return d => d.Sex; };
+	     };
+	     
+	     //freqByFeatureN for creating groups
+	     function freqByFeature1(key, data) {
+		 //Returns obj of freq from data grouped by key
+		 return d3.nest().key(key).rollup(v => d3.sum(v, d => d.Freq)).object(data);
+	     };
+
+	     function freqByFeature2(key1, key2, data) {
+		 //Returns obj of freq from data grnouped by key1 and then key2
+		 return d3.nest().key(key1).key(key2).rollup(v => d3.sum(v, d => d.Freq)).object(data);
+	     };
+
+	     function freqByFeature3(key1, key2, key3, data) {
+		 //Returns obj of freq from data grouped by key1, key2 and then key3
+		 return d3.nest().key(key1).key(key2).key(key3).rollup(v => d3.sum(v, d => d.Freq)).object(data);
+	     };
+	     
+	     function freqByFeature(keys, data) {
+		 //Returns obj of freq from data grouped by keys
+		 if (keys.length === 1) {
+		     return freqByFeature1(keys[0], data);
+		 } else if (keys.length === 2) {
+		     return freqByFeature2(keys[0], keys[1], data);
+		 } else if (keys.length === 3) {
+		     return freqByFeature3(keys[0], keys[1], keys[2], data);
+		 };
+	     };
+
+	     //Declare variables for update functions
+	     let dataUpdate = data;
+	     let feature = 'None';
+	     let features = [];
+	     let key = 'None';
+	     let keys = [];
+	     let nChecked = 0;
+
+	     //Reset mosaic area
+	     function resetArea() {
+		 //Reset counters
+		 nChecked = 0;
+		 features = [];
+		 keys = [];
+
+		 //Remove tiles
+		 container.selectAll('rect')
+			  .remove();
+
+		 //Remove table
+		 d3.select('table').remove();
+		 //Redraw table
+		 tabulate(data, ['Hair', 'Eye', 'Sex', 'Freq']);
+
+		 //Remove Labels
+		 d3.selectAll('text').remove();
+
+		 //Create initial mosaic area
+		 const mosaicInit = container.append('rect')
+					     .attr('class', 'tile')
+					     .attr('id', 'init')
+					     .attr('x', 0)
+					     .attr('y', 0)
+					     .attr('width', width - innerPad)
+					     .attr('height', height - innerPad)
+					     .attr('opacity', .75);
+
+		 //Uncheck all inputs
+		 document.getElementById('updateHairV').checked = false;
+		 document.getElementById('updateHairH').checked = false;
+		 document.getElementById('updateEyeV').checked = false;
+		 document.getElementById('updateEyeH').checked = false;
+		 document.getElementById('updateSexV').checked = false;
+		 document.getElementById('updateSexH').checked = false;
+
+		 //Enable all inputs
+		 document.getElementById('updateHairV').disabled = false;
+		 document.getElementById('updateHairH').disabled = false;
+		 document.getElementById('updateEyeV').disabled = false;
+		 document.getElementById('updateEyeH').disabled = false;
+		 document.getElementById('updateSexV').disabled = false;
+		 document.getElementById('updateSexH').disabled = false;
+
+	     };
+	     
+	     //Update Hair vertical function
+	     function updateHairV() {
+
+		 if (this.checked) {
+		     
+		     //Increment num checked
+		     nChecked += 1
+
+		     //Disable updateHairH
+		     document.getElementById('updateHairH').disabled = true;
+		     //Disable updateVs
+		     document.getElementById('updateEyeV').disabled = true;
+		     document.getElementById('updateSexV').disabled = true;
+
+		     //Add key for hair
+		     feature = 'Hair';
+		     features.push(feature);
+		     key = forge(features[nChecked - 1]);
+		     keys.push(key);
+
+		     //Remove table
+		     d3.select('table').remove();
+
+		     if (keys.length === 1) {
+			 dataHair = getValues1(freqByFeature(keys, data));
+
+			 let dataHairCum = []
+			 dataHair.reduce((a, b, i) => dataHairCum[i] = a + b, 0);
+			 
+			 let hairObj = []
+			 dataHair.map((d, i) => hairObj.push({'hair': Hair[i], 'freq': d}));
+
+			 dataUpdate = hairObj;
+			 console.log(dataUpdate);
+
+			 //Labels
+			 let hairLabel = container.selectAll('text')
+						  .data(dataUpdate).enter()
+						  .append('text')
+						  .attr('class', 'lbl')
+						  .attr('text-anchor', 'middle')
+						  .attr('x', (d, i) => xScale(dataHairCum[i] - d.freq / 2) - innerPad)
+						  .attr('y', -margin.top / 4)
+						  .text(d => d.hair);
+			 
+			 //Title
+			 let hairTitle = container.append('text')
+						  .attr('class', 'title')
+						  .attr('text-anchor', 'middle')
+						  .attr('x', width / 2)
+						  .attr('y', - margin.top / 2)
+						  .text('Hair color');
+
+			 //Redraw table
+			 tabulate(dataUpdate, ['hair', 'freq']);
+
+			 //Update selection
+			 let selection = container.selectAll('.tile').data(dataUpdate)
+						  .attr('id', d => 'hair' + d.hair)
+						  .attr('width', d => xScale(d.freq) - innerPad)
+						  .attr('fill', (d, i) => Object.values(hairColor)[i]);
+
+			 //Enter selection
+			 selection.enter()
+				  .append('rect')
+				  .attr('class', 'tile')
+				  .attr('id', d => 'hair' + d.hair)
+				  .attr('x', (d, i) => xScale(dataHairCum[i] - d.freq))
+				  .attr('y', 0)
+				  .attr('width', d => xScale(d.freq) - innerPad)
+				  .attr('height', height - innerPad)
+				  .attr('fill', (d, i) => Object.values(hairColor)[i])
+				  .attr('opacity', .75);
+
+			 //Exit selection
+			 selection.exit().remove();
+
+		     } else if (keys.length === 2) {
+			 if (features[0] === 'Eye') {
+			     dataHair = getValues2(freqByFeature(keys, data));
+
+			     //Redraw table
+			     let dataDraw = freqByFeature(keys, data);
+			     let dataTb = tabMass(dataDraw, 'Eye', 'Hair');
+			     tabulate(dataTb, ['Eye', 'Hair', 'Freq']);
+
+			     for (let eyeIndex = 0; eyeIndex < dataHair.length; eyeIndex++) {
+
+				 let idSelector = '#eye' + Eye[eyeIndex];
+				 let dataSelector = dataHair[eyeIndex];
+				 let dataMerge = dataSelector[Eye[eyeIndex]];
+				 let x2Scale = d3.scaleLinear()
+						 .domain([0, dataSelector[Eye[eyeIndex]].reduce((a, b) => a + b)])
+						 .rangeRound([0, width]);
+
+				 let yPos = d3.select('' + idSelector).attr('y');
+				 let hPos = d3.select('' + idSelector).attr('height');
+
+				 if (eyeIndex === 0) {
+				     
+				     //Title
+				     let hairTitle = container.append('text')
+							      .attr('class', 'title')
+							      .attr('text-anchor', 'middle')
+							      .attr('x', width / 2)
+							      .attr('y', - margin.left / 2)
+							      .text('Hair color');
+
+				 };//End if eyeIndex === 0
+				 
+				 //Update selection
+				 let selection = container.selectAll('' + idSelector)
+							  .data(dataMerge)
+							  .attr('class', 'eye' + Eye[eyeIndex])
+							  .attr('id', 'hair' + Hair[0])
+							  .attr('width', d => x2Scale(d) - innerPad)
+							  .attr('fill', (d, i) => Object.values(hairColor)[i]);
+
+				 selection.enter().append('rect')
+					  .attr('class', 'eye' + Eye[eyeIndex])
+					  .attr('id', 'hair' + Hair[eyeIndex])
+					  .attr('x', (d, i) => x2Scale(dataMerge.slice(0, i).reduce((a, b) => a + b)))
+					  .attr('y', yPos)
+					  .attr('width', d => x2Scale(d) - innerPad)
+					  .attr('height', hPos)
+					  .attr('fill', (d, i) => Object.values(hairColor)[i])
+					  .attr('opacity', .75);
+
+			     };
+			     
+			 } else if (features[0] === 'Sex') {
+			     dataHair = getValues2(freqByFeature(keys, data));
+
+			     //Redraw table
+			     let dataDraw = freqByFeature(keys, data);
+			     let dataTb = tabMass(dataDraw, 'Sex', 'Hair');
+			     tabulate(dataTb, ['Sex', 'Hair', 'Freq']);
+			     
+			     for (let sexIndex = 0; sexIndex < dataHair.length; sexIndex++) {
+
+				 let idSelector = '#sex' + Sex[sexIndex];
+				 let dataSelector = dataHair[sexIndex];
+				 let dataMerge = dataSelector[Sex[sexIndex]];
+				 let x2Scale = d3.scaleLinear()
+						 .domain([0, dataSelector[Sex[sexIndex]].reduce((a, b) => a + b)])
+						 .range([0, width]);
+
+				 let yPos = d3.select('' + idSelector).attr('y');
+				 let hPos = d3.select('' + idSelector).attr('height');
+
+				 if (sexIndex === 0) {
+				     
+				     //Title
+				     let hairTitle = container.append('text')
+							      .attr('class', 'title')
+							      .attr('text-anchor', 'middle')
+							      .attr('x', width / 2)
+							      .attr('y', - margin.left / 2)
+							      .text('Hair color');
+
+				 };//End if sexIndex === 0
+				 
+				 //Update selection
+				 let selection = container.selectAll('' + idSelector)
+							  .data(dataMerge)
+							  .attr('class', 'sex' + Sex[sexIndex])
+							  .attr('id', 'hair' + Hair[0])
+							  .attr('width', d => x2Scale(d) - innerPad)
+							  .attr('fill', (d, i) => Object.values(hairColor)[i]);
+
+				 //Enter selection
+				 selection.enter().append('rect')
+					  .attr('class', 'sex' + Sex[sexIndex])
+					  .attr('id', (d, i) => 'hair' + Hair[i])
+					  .attr('x', (d, i) => x2Scale(dataMerge.slice(0, i).reduce((a, b) => a + b)))
+					  .attr('y', yPos)
+					  .attr('width', d => x2Scale(d) - innerPad)
+					  .attr('height', hPos)
+					  .attr('fill', (d, i) => Object.values(hairColor)[i])
+					  .attr('opacity', .75);
+			     };//Close for loop
+			     
+			 };//Close else if features[0] === 'Sex'
+			 
+		     };//Close keys.length === 2
+		     
+		 } else {
+		     resetArea();
+		 };
+		 
+	     };
+
+	     //Update Hair horizontal function
+	     function updateHairH() {
+
+		 if (this.checked) {
+		     //Increment num checked
+		     nChecked += 1
+
+		     //Disable updateHairV
+		     document.getElementById('updateHairV').disabled = true;
+		     //Disable updateHs
+		     document.getElementById('updateEyeH').disabled = true;
+		     document.getElementById('updateSexH').disabled = true;
+
+		     //Add key for hair
+		     feature = 'Hair';
+		     features.push(feature);
+		     key = forge(features[nChecked - 1]);
+		     keys.push(key);
+		     
+		     //Remove table
+		     d3.select('table').remove();
+
+		     if (keys.length === 1) {
+			 dataHair = getValues1(freqByFeature(keys, data));
+
+			 let dataHairCum = []
+			 dataHair.reduce((a, b, i) => dataHairCum[i] = a + b, 0);
+
+			 let hairObj = []
+			 dataHair.map((d, i) => hairObj.push({'hair': Hair[i], 'freq': d}));
+			 
+			 dataUpdate = hairObj;
+
+			 //Labels
+			 let hairLabel = container.selectAll('div')
+						  .data(dataUpdate).enter()
+						  .append('text')
+						  .attr('class', 'lbl')
+						  .attr('id', d => 'label' + d.hair)
+						  .style('text-anchor', 'middle')
+						  .attr('x', (d, i) => - yScale(dataHairCum[i] - d.freq) - yScale(d.freq) / 2)
+						  .attr('y', -margin.top / 4)
+						  .attr('transform', 'rotate(-90)')
+						  .text(d => d.hair);
+			 
+			 //Title
+			 let hairTitle = container.append('text')
+						  .attr('class', 'title')
+						  .attr('text-anchor', 'middle')
+						  .attr('x', - height / 2)
+						  .attr('y', - margin.left / 2)
+						  .attr('transform', 'rotate(-90)')
+						  .text('Hair color');
+			 
+			 //Redraw table
+			 tabulate(dataUpdate, ['hair', 'freq']);
+
+			 //Update selection
+			 let selection = container.selectAll('.tile').data(dataUpdate)
+						  .attr('id', d => 'hair' + d.hair)
+						  .attr('height', d => yScale(d.freq) - innerPad);
+
+			 //Enter selction
+			 selection.enter()
+				  .append('rect')
+				  .attr('class', 'tile')
+				  .attr('id', d => 'hair' + d.hair)
+				  .attr('x', 0)
+				  .attr('y', (d, i) => yScale(dataHairCum[i] - d.freq))
+				  .attr('width', width - innerPad)
+				  .attr('height', d => yScale(d.freq) - innerPad)
+				  .attr('fill', (d, i) => Object.values(hairColor)[i])
+				  .attr('opacity', .75);
+
+			 //Exit selection
+			 selection.exit().remove();
+
+		     } else if (keys.length === 2) {
+			 if (features[0] === 'Eye') {
+			     dataHair = getValues2(freqByFeature(keys, data));
+
+			     //Redraw table
+			     let dataDraw = freqByFeature(keys, data);
+			     let dataTb = tabMass(dataDraw, 'Eye', 'Hair');
+			     tabulate(dataTb, ['Eye', 'Hair', 'Freq']);
+
+			     for (let eyeIndex = 0; eyeIndex < dataHair.length; eyeIndex++) {
+
+				 let idSelector = '#eye' + Eye[eyeIndex];
+				 let dataSelector = dataHair[eyeIndex];
+				 let dataMerge = dataSelector[Eye[eyeIndex]];
+				 let y2Scale = d3.scaleLinear()
+						 .domain([0, dataSelector[Eye[eyeIndex]].reduce((a, b) => a + b)])
+						 .rangeRound([0, height]);
+
+				 let xPos = d3.select('' + idSelector).attr('x');
+				 let wPos = d3.select('' + idSelector).attr('width');
+
+				 if (eyeIndex === 0) {
+				     
+				     //Title
+				     let hairTitle = container.append('text')
+							      .attr('class', 'title')
+							      .attr('text-anchor', 'middle')
+							      .attr('x', - height / 2)
+							      .attr('y', - margin.left / 2)
+							      .attr('transform', 'rotate(-90)')
+							      .text('Hair color');
+
+				 };//End if eyeIndex === 0
+				 
+				 //Update selection
+				 let selection = container.selectAll('' + idSelector)
+							  .data(dataMerge)
+							  .attr('class', 'eye' + Eye[eyeIndex])
+							  .attr('id', 'hair' + Hair[0])
+							  .attr('height', d => y2Scale(d) - innerPad)
+							  .attr('fill', (d, i) => Object.values(hairColor)[i]);
+
+				 selection.enter().append('rect')
+					  .attr('class', 'eye' + Eye[eyeIndex])
+					  .attr('id', (d, i) => 'hair' + Hair[i])
+					  .attr('x', xPos)
+					  .attr('y', (d, i) => y2Scale(dataMerge.slice(0, i).reduce((a, b) => a + b)))
+					  .attr('width', wPos)
+					  .attr('height', d => y2Scale(d) - innerPad)
+					  .attr('fill', (d, i) => Object.values(hairColor)[i])
+					  .attr('opacity', .75);
+				 
+			     };//End for loop
+			 } else if (features[0] === 'Sex') {
+			     dataHair = getValues2(freqByFeature(keys, data));
+
+			     //Redraw table
+			     let dataDraw = freqByFeature(keys, data);
+			     let dataTb = tabMass(dataDraw, 'Sex', 'Hair');
+			     tabulate(dataTb, ['Sex', 'Hair', 'Freq']);
+
+			     for (let sexIndex = 0; sexIndex < dataHair.length; sexIndex++) {
+
+				 let idSelector = '#sex' + Sex[sexIndex];
+				 let dataSelector = dataHair[sexIndex];
+				 let dataMerge = dataSelector[Sex[sexIndex]];
+				 let y2Scale = d3.scaleLinear()
+						 .domain([0, dataSelector[Sex[sexIndex]].reduce((a, b) => a + b)])
+						 .range([0, height]);
+
+				 let xPos = d3.select('' + idSelector).attr('x');
+				 let wPos = d3.select('' + idSelector).attr('width');
+
+				 if (sexIndex === 0) {
+				     //Title
+				     let hairTitle = container.append('text')
+							      .attr('class', 'title')
+							      .attr('text-anchor', 'middle')
+							      .attr('x', - height / 2)
+							      .attr('y', - margin.left / 2)
+							      .attr('transform', 'rotate(-90)')
+							      .text('Hair color');
+				 };
+				 
+				 //Update selection
+				 let selection = container.selectAll('' + idSelector)
+							  .data(dataMerge)
+							  .attr('class', 'sex' + Sex[sexIndex])
+							  .attr('id', 'hair' + Hair[0])
+							  .attr('height', d => y2Scale(d) - innerPad)
+							  .attr('fill', (d, i) => Object.values(hairColor)[i]);
+
+				 //Enter selection
+				 selection.enter().append('rect')
+					  .attr('class', 'sex' + Sex[sexIndex])
+					  .attr('id', (d, i) => 'hair' + Hair[i])
+					  .attr('x', xPos)
+					  .attr('y', (d, i) => y2Scale(dataMerge.slice(0, i).reduce((a, b) => a + b)))
+					  .attr('width', wPos)
+					  .attr('height', d => y2Scale(d) - innerPad)
+					  .attr('fill', (d, i) => Object.values(hairColor)[i])
+					  .attr('opacity', .75);
+				 
+			     };//End for loop for sexIndex
+			     
+			 };//End features[0] === 'Sex'
+			 
+		     };
+		 } else { resetArea(); };
+	     };
+	     
+	     //Update Eye vertical function
+	     function updateEyeV() {
+
+		 if (this.checked) {
+		     //Increment num checked
+		     nChecked += 1
+
+		     //Disable updateEyeH
+		     document.getElementById('updateEyeH').disabled = true;
+		     //Disable updateVs
+		     document.getElementById('updateHairV').disabled = true;
+		     document.getElementById('updateSexV').disabled = true;
+
+		     //Add key for eye
+		     feature = 'Eye';
+		     features.push(feature);
+		     key = forge(features[nChecked - 1]);
+		     keys.push(key);
+		     
+		     //Remove table
+		     d3.select('table').remove();
+
+		     if (keys.length === 1) {
+			 dataEye = getValues1(freqByFeature(keys, data));
+
+			 let dataEyeCum = []
+			 dataEye.reduce((a, b, i) => dataEyeCum[i] = a + b, 0);
+
+			 let eyeObj = []
+			 dataEye.map((d, i) => eyeObj.push({'eye': Eye[i], 'freq': d}));
+
+			 dataUpdate = eyeObj;
+
+			 //Labels
+			 let eyeLabel = container.selectAll('text')
+						 .data(dataUpdate).enter()
+						 .append('text')
+						 .attr('class', 'lbl')
+						 .attr('text-anchor', 'middle')
+						 .attr('x', (d, i) => xScale(dataEyeCum[i] - d.freq / 2) - innerPad)
+						 .attr('y', -margin.top / 4)
+						 .text(d => d.eye);
+			 
+			 //Title
+			 let eyeTitle = container.append('text')
+						 .attr('class', 'title')
+						 .attr('text-anchor', 'middle')
+						 .attr('x', width / 2)
+						 .attr('y', - margin.top / 2)
+						 .text('Eye color');
+
+			 //Redraw table
+			 tabulate(dataUpdate, ['eye', 'freq']);
+
+			 //Update selection
+			 let selection = container.selectAll('.tile').data(dataUpdate)
+						  .attr('id', d => 'eye' + d.eye)
+						  .attr('width', d => xScale(d.freq) - innerPad)
+						  .attr('fill', (d, i) => Object.values(eyeColor)[i]);
+
+			 //Enter selction
+			 selection.enter()
+				  .append('rect')
+				  .attr('class', 'tile')
+				  .attr('id', d => 'eye' + d.eye)
+				  .attr('x', (d, i) => xScale(dataEyeCum[i] - d.freq))
+				  .attr('y', 0)
+				  .attr('width', d => xScale(d.freq) - innerPad)
+				  .attr('height', height - innerPad)
+				  .attr('fill', (d, i) => Object.values(eyeColor)[i])
+				  .attr('opacity', .75);
+
+			 //Exit selection
+			 selection.exit().remove();
+
+		     } else if (keys.length === 2) {
+
+			 if (features[0] === 'Hair') {
+			     dataEye = getValues2(freqByFeature(keys, data));
+
+			     //Redraw table
+			     let dataDraw = freqByFeature(keys, data);
+			     let dataTb = tabMass(dataDraw, 'Hair', 'Eye');
+			     tabulate(dataTb, ['Hair', 'Eye', 'Freq']);
+
+			     for (let hairIndex = 0; hairIndex < dataEye.length; hairIndex++) {
+
+				 let idSelector = '#hair' + Hair[hairIndex];
+				 let dataSelector = dataEye[hairIndex];
+				 let dataMerge = dataSelector[Hair[hairIndex]];
+				 let x2Scale = d3.scaleLinear()
+						 .domain([0, dataSelector[Hair[hairIndex]].reduce((a, b) => a + b)])
+						 .rangeRound([0, width]);
+
+				 let yPos = d3.select('' + idSelector).attr('y');
+				 let hPos = d3.select('' + idSelector).attr('height');
+
+				 if (hairIndex === 0) {
+
+				     //Title
+				     let eyeTitle = container.append('text')
+							     .attr('class', 'title')
+							     .attr('text-anchor', 'middle')
+							     .attr('x', width / 2)
+							     .attr('y', - margin.left / 2)
+							     .text('Eye color');
+				 };
+				 
+				 //Update selection
+				 let selection = container.selectAll('' + idSelector)
+							  .data(dataMerge)
+							  .attr('class', 'hair' + Hair[hairIndex])
+							  .attr('id', 'id' + Eye[0])
+							  .attr('width', d => x2Scale(d) - innerPad).attr('fill', (d, i) => Object.values(eyeColor)[i]);
+
+				 selection.enter().append('rect')
+					  .attr('class', 'hair' + Hair[hairIndex])
+					  .attr('id', (d, i) => 'eye' + Eye[i])
+					  .attr('x', (d, i) => x2Scale(dataMerge.slice(0, i).reduce((a, b) => a + b)))
+					  .attr('y', yPos)
+					  .attr('width', d => x2Scale(d) - innerPad)
+					  .attr('height', hPos)
+					  .attr('fill', (d, i) => Object.values(eyeColor)[i])
+					  .attr('opacity', .75);
+
+			     };//End for hairIndex loop
+			     
+			 } else if (features[0] === 'Sex') {
+			     dataEye = getValues2(freqByFeature(keys, data));
+
+			     //Redraw table
+			     let dataDraw = freqByFeature(keys, data);
+			     let dataTb = tabMass(dataDraw, 'Sex', 'Eye');
+			     tabulate(dataTb, ['Sex', 'Eye', 'Freq']);
+
+			     for (let sexIndex = 0; sexIndex < dataEye.length; sexIndex++) {
+
+				 let idSelector = '#sex' + Sex[sexIndex];
+				 let dataSelector = dataEye[sexIndex];
+				 let dataMerge = dataSelector[Sex[sexIndex]];
+				 let x2Scale = d3.scaleLinear()
+						 .domain([0, dataSelector[Sex[sexIndex]].reduce((a, b) => a + b)])
+						 .rangeRound([0, width]);
+
+				 let yPos = d3.select('' + idSelector).attr('y');
+				 let hPos = d3.select('' + idSelector).attr('height');
+
+				 if (sexIndex === 0) {
+
+				     //Title
+				     let eyeTitle = container.append('text')
+							     .attr('class', 'title')
+							     .attr('text-anchor', 'middle')
+							     .attr('x', width / 2)
+							     .attr('y', - margin.left / 2)
+							     .text('Eye color');
+				 };
+				 
+				 //Update selection
+				 let selection = container.selectAll('' + idSelector)
+							  .data(dataMerge)
+							  .attr('class', 'sex' + Sex[sexIndex])
+							  .attr('id', 'eye' + Eye[0])
+							  .attr('width', d => x2Scale(d) - innerPad).attr('fill', (d, i) => Object.values(eyeColor)[i]);
+
+				 selection.enter().append('rect')
+					  .attr('class', 'sex' + Sex[sexIndex])
+					  .attr('id', (d, i) => 'eye' + Eye[i])
+					  .attr('x', (d, i) => x2Scale(dataMerge.slice(0, i).reduce((a, b) => a + b)))
+					  .attr('y', yPos)
+					  .attr('width', d => x2Scale(d) - innerPad)
+					  .attr('height', hPos)
+					  .attr('fill', (d, i) => Object.values(eyeColor)[i])
+					  .attr('opacity', .75);
+
+			     };//End for sexIndex loop
+			     
+			 };//End features[0] === 'Sex'
+			 
+		     };//End keys.length === 2
+		     
+		 } else { resetArea(); };
+	     };
+
+	     //Update Eye horizontal function
+	     function updateEyeH() {
+
+		 if (this.checked) {
+		     //Increment num checked
+		     nChecked += 1
+		     
+		     //Disable updateEyeV
+		     document.getElementById('updateEyeV').disabled = true;
+		     //Disable updateHs
+		     document.getElementById('updateHairH').disabled = true;
+		     document.getElementById('updateSexH').disabled = true;
+
+		     feature = 'Eye';
+		     features.push(feature);
+		     key = forge(features[nChecked - 1]);
+		     keys.push(key);
+
+		     //Remove table
+		     d3.select('table').remove();
+
+		     if (keys.length === 1) {
+			 const dataEye = getValues1(freqByFeature(keys, data));
+
+			 let dataEyeCum = []
+			 dataEye.reduce((a, b, i) => dataEyeCum[i] = a + b, 0);
+
+			 let eyeObj = []
+			 dataEye.map((d, i) => eyeObj.push({'eye': Eye[i], 'freq': d}));
+
+			 dataUpdate = eyeObj;
+
+			 //Labels
+			 let eyeLabel = container.selectAll('text')
+						 .data(dataUpdate).enter()
+						 .append('text')
+						 .attr('class', 'lbl')
+						 .attr('id', d => 'label' + d.eye)
+						 .style('text-anchor', 'middle')
+						 .attr('x', (d, i) => - yScale(dataEyeCum[i] - d.freq) - yScale(d.freq) / 2)
+						 .attr('y', -margin.top / 4)
+						 .attr('transform', 'rotate(-90)')
+						 .text(d => d.eye);
+			 
+			 //Title
+			 let eyeTitle = container.append('text')
+						 .attr('class', 'title')
+						 .attr('text-anchor', 'middle')
+						 .attr('x', - height / 2)
+						 .attr('y', - margin.left / 2)
+						 .attr('transform', 'rotate(-90)')
+						 .text('Eye color');
+
+			 //Redraw table
+			 tabulate(dataUpdate, ['eye', 'freq']);
+
+			 //Update selection
+			 let selection = container.selectAll('.tile').data(dataUpdate)
+						  .attr('id', d => 'eye' + d.eye)
+						  .attr('height', d => yScale(d.freq) - innerPad)
+						  .attr('fill', (d, i) => Object.values(eyeColor)[i]);
+
+			 //Enter selction
+			 selection.enter()
+				  .append('rect')
+				  .attr('class', 'tile')
+				  .attr('id', d => 'eye' + d.eye)
+				  .attr('x', 0)
+				  .attr('y', (d, i) => yScale(dataEyeCum[i] - d.freq))
+				  .attr('width', width - innerPad)
+				  .attr('height', d => yScale(d.freq) - innerPad)
+				  .attr('fill', (d, i) => Object.values(eyeColor)[i])
+				  .attr('opacity', .75);
+
+			 //Exit selection
+			 selection.exit().remove();
+
+		     } else if (keys.length === 2) {
+
+			 if (features[0] === 'Hair') {
+			     dataEye = getValues2(freqByFeature(keys, data));
+
+			     //Redraw table
+			     let dataDraw = freqByFeature(keys, data);
+			     let dataTb = tabMass(dataDraw, 'Hair', 'Eye');
+			     tabulate(dataTb, ['Hair', 'Eye', 'Freq']);
+
+			     for (let hairIndex = 0; hairIndex < dataEye.length; hairIndex++) {
+
+				 let idSelector = '#hair' + Hair[hairIndex];
+				 let dataSelector = dataEye[hairIndex];
+				 let dataMerge = dataSelector[Hair[hairIndex]];
+				 let y2Scale = d3.scaleLinear()
+						 .domain([0, dataSelector[Hair[hairIndex]].reduce((a, b) => a + b)])
+						 .rangeRound([0, height]);
+
+				 let xPos = d3.select('' + idSelector).attr('x');
+				 let wPos = d3.select('' + idSelector).attr('width');
+
+				 if (hairIndex === 0) {
+				     //Title
+				     let eyeTitle = container.append('text')
+							     .attr('class', 'title')
+							     .attr('text-anchor', 'middle')
+							     .attr('x', - height / 2)
+							     .attr('y', - margin.left / 2)
+							     .attr('transform', 'rotate(-90)')
+							     .text('Eye color');
+				 };
+				 
+				 //Update selection
+				 let selection = container.selectAll('' + idSelector)
+							  .data(dataMerge)
+							  .attr('class', 'hair' + Hair[hairIndex])
+							  .attr('id', 'eye' + Eye[0])
+							  .attr('height', d => y2Scale(d) - innerPad)
+							  .attr('fill', (d, i) => Object.values(eyeColor)[0]);
+
+				 selection.enter().append('rect')
+					  .attr('class', 'hair' + Hair[hairIndex])
+					  .attr('id', (d, i) => 'eye' + Eye[i])
+					  .attr('x', xPos)
+					  .attr('y', (d, i) => y2Scale(dataMerge.slice(0, i).reduce((a, b) => a + b)))
+					  .attr('width', wPos)
+					  .attr('height', d => y2Scale(d) - innerPad)
+					  .attr('fill', (d, i) => Object.values(eyeColor)[i])
+					  .attr('opacity', .75);
+
+			     };//End for loop
+			     
+			 } else if (features[0] === 'Sex') {
+			     dataEye = getValues2(freqByFeature(keys, data));
+
+			     //Redraw table
+			     let dataDraw = freqByFeature(keys, data);
+			     let dataTb = tabMass(dataDraw, 'Sex', 'Eye');
+			     tabulate(dataTb, ['Sex', 'Eye', 'Freq']);
+
+			     for (let sexIndex = 0; sexIndex < dataEye.length; sexIndex++) {
+
+				 let idSelector = '#sex' + Sex[sexIndex];
+				 let dataSelector = dataEye[sexIndex];
+				 let dataMerge = dataSelector[Sex[sexIndex]];
+				 let y2Scale = d3.scaleLinear()
+						 .domain([0, dataSelector[Sex[sexIndex]].reduce((a, b) => a + b)])
+						 .range([0, height]);
+
+				 let xPos = d3.select('' + idSelector).attr('x');
+				 let wPos = d3.select('' + idSelector).attr('width');
+
+				 if (sexIndex === 0) {
+
+				     let eyeTitle = container.append('text')
+							     .attr('class', 'title')
+							     .attr('text-anchor', 'middle')
+							     .attr('x', - height / 2)
+							     .attr('y', - margin.left / 2)
+							     .attr('transform', 'rotate(-90)')
+							     .text('Eye color');
+				     
+				 };
+				 
+				 //Update selection
+				 let selection = container.selectAll('' + idSelector)
+							  .data(dataMerge)
+							  .attr('class', 'sex' + Sex[sexIndex])
+							  .attr('id', 'eye' + Eye[0])
+							  .attr('height', d => y2Scale(d) - innerPad)
+							  .attr('fill', (d, i) => Object.values(eyeColor)[i]);
+
+				 //Enter selection
+				 selection.enter().append('rect')
+					  .attr('class', 'sex' + Sex[sexIndex])
+					  .attr('id', (d, i) => 'eye' + Eye[i])
+					  .attr('x', xPos)
+					  .attr('y', (d, i) => y2Scale(dataMerge.slice(0, i).reduce((a, b) => a + b)))
+					  .attr('width', wPos)
+					  .attr('height', d => y2Scale(d) - innerPad)
+					  .attr('fill', (d, i) => Object.values(eyeColor)[i])
+					  .attr('opacity', .75);
+			     };//End for loop for sexIndex
+
+			 };//End features[0] === 'Sex'
+			 
+		     };//End if keys.length === 2
+		     
+		 } else { resetArea(); };
+	     };
+
+	     //Update Sex vertical function
+	     function updateSexV() {
+
+		 if (this.checked) {
+		     //Increment num checked
+		     nChecked += 1
+
+		     //Disable updateSexH
+		     document.getElementById('updateSexH').disabled = true;
+		     //Disable updateVs
+		     document.getElementById('updateHairV').disabled = true;
+		     document.getElementById('updateEyeV').disabled = true;
+
+		     feature = 'Sex';
+		     features.push(feature);
+		     key = forge(features[nChecked - 1]);
+		     keys.push(key);
+
+		     //Remove table
+		     d3.select('table').remove();
+
+		     if (keys.length === 1) {
+			 dataSex = getValues1(freqByFeature(keys, data));
+
+			 let dataSexCum = []
+			 dataSex.reduce((a, b, i) => dataSexCum[i] = a + b, 0);
+
+			 let sexObj = []
+			 dataSex.map((d, i) => sexObj.push({'sex': Sex[i], 'freq': d}));
+
+			 dataUpdate = sexObj;
+
+			 //Labels
+			 let sexLabel = container.selectAll('text')
+						 .data(dataUpdate).enter()
+						 .append('text')
+						 .attr('class', 'lbl')
+						 .attr('text-anchor', 'middle')
+						 .attr('x', (d, i) => xScale(dataSexCum[i] - d.freq / 2) - innerPad)
+						 .attr('y', -margin.top / 4)
+						 .text(d => d.sex);
+			 
+			 //Title
+			 let sexTitle = container.append('text')
+						 .attr('class', 'title')
+						 .attr('text-anchor', 'middle')
+						 .attr('x', width / 2)
+						 .attr('y', - margin.top / 2)
+						 .text('Sex');
+
+			 //Redraw table
+			 tabulate(dataUpdate, ['sex', 'freq']);
+
+			 //Update selection
+			 let selection = container.selectAll('.tile').data(dataUpdate)
+						  .attr('id', d => 'sex' + d.sex)
+						  .attr('width', d => xScale(d.freq) - innerPad)
+						  .attr('fill', (d, i) => Object.values(sexColor)[i]);
+
+			 //Enter selction
+			 selection.enter()
+				  .append('rect')
+				  .attr('class', 'tile')
+				  .attr('id', d => 'sex' + d.sex)
+				  .attr('x', (d, i) => xScale(dataSexCum[i] - d.freq))
+				  .attr('y', 0)
+				  .attr('width', d => xScale(d.freq) - innerPad)
+				  .attr('height', height - innerPad)
+				  .attr('fill', (d, i) => Object.values(sexColor)[i])
+				  .attr('opacity', .75);
+
+			 //Exit selection
+			 selection.exit().remove();
+
+		     } else if (keys.length === 2) {
+
+			 if (features[0] === 'Hair') {
+			     dataSex = getValues2(freqByFeature(keys, data));
+
+			     //Redraw table
+			     let dataDraw = freqByFeature(keys, data);
+			     let dataTb = tabMass(dataDraw, 'Hair', 'Sex');
+			     tabulate(dataTb, ['Hair', 'Sex', 'Freq']);
+
+			     for (let hairIndex = 0; hairIndex < dataSex.length; hairIndex++) {
+
+				 let idSelector = '#hair' + Hair[hairIndex];
+				 let dataSelector = dataSex[hairIndex];
+				 let dataMerge = dataSelector[Hair[hairIndex]];
+				 let x2Scale = d3.scaleLinear()
+						 .domain([0, dataSelector[Hair[hairIndex]].reduce((a, b) => a + b)])
+						 .rangeRound([0, width]);
+
+				 let yPos = d3.select('' + idSelector).attr('y');
+				 let hPos = d3.select('' + idSelector).attr('height');
+
+				 if (hairIndex === 0) {
+
+				     //Title
+				     let sexTitle = container.append('text')
+							     .attr('class', 'title')
+							     .attr('text-anchor', 'middle')
+							     .attr('x', width / 2)
+							     .attr('y', - margin.left / 2)
+							     .text('Sex');
+				 };
+				 
+				 //Update selection
+				 let selection = container.selectAll('' + idSelector)
+							  .data(dataMerge)
+							  .attr('class', 'hair' + Hair[hairIndex])
+							  .attr('id', 'id' + Sex[0])
+							  .attr('width', d => x2Scale(d) - innerPad)
+							  .attr('fill', (d, i) => Object.values(sexColor)[i]);
+
+				 selection.enter().append('rect')
+					  .attr('class', 'hair' + Hair[hairIndex])
+					  .attr('id', (d, i) => 'sex' + Sex[i])
+					  .attr('x', (d, i) => x2Scale(dataMerge.slice(0, i).reduce((a, b) => a + b)))
+					  .attr('y', yPos)
+					  .attr('width', d => x2Scale(d) - innerPad)
+					  .attr('height', hPos)
+					  .attr('fill', (d, i) => Object.values(sexColor)[i])
+					  .attr('opacity', .75);
+
+			     };//End for hairIndex loop
+			     
+			 } else if (features[0] === 'Eye') {
+			     dataSex = getValues2(freqByFeature(keys, data));
+
+			     //Redraw table
+			     let dataDraw = freqByFeature(keys, data);
+			     let dataTb = tabMass(dataDraw, 'Eye', 'Sex');
+			     tabulate(dataTb, ['Eye', 'Sex', 'Freq']);
+
+			     for (let eyeIndex = 0; eyeIndex < dataSex.length; eyeIndex++) {
+
+				 let idSelector = '#eye' + Eye[eyeIndex];
+				 let dataSelector = dataSex[eyeIndex];
+				 let dataMerge = dataSelector[Eye[eyeIndex]];
+				 let x2Scale = d3.scaleLinear()
+						 .domain([0, dataSelector[Eye[eyeIndex]].reduce((a, b) => a + b)])
+						 .rangeRound([0, width]);
+
+				 let yPos = d3.select('' + idSelector).attr('y');
+				 let hPos = d3.select('' + idSelector).attr('height');
+
+				 if (eyeIndex === 0) {
+
+				     let sexTitle = container.append('text')
+							     .attr('class', 'title')
+							     .attr('text-anchor', 'middle')
+							     .attr('x', width / 2)
+							     .attr('y', - margin.left / 2)
+							     .text('Sex');
+				 };
+				 
+				 //Update selection
+				 let selection = container.selectAll('' + idSelector)
+							  .data(dataMerge)
+							  .attr('class', 'eye' + Eye[eyeIndex])
+							  .attr('id', 'sex' + Sex[0])
+							  .attr('width', d => x2Scale(d) - innerPad)
+							  .attr('fill', (d, i) => Object.values(sexColor)[i]);
+
+				 selection.enter().append('rect')
+					  .attr('class', 'eye' + Eye[eyeIndex])
+					  .attr('id', (d, i) => 'sex' + Sex[i])
+					  .attr('x', (d, i) => x2Scale(dataMerge.slice(0, i).reduce((a, b) => a + b)))
+					  .attr('y', yPos)
+					  .attr('width', d => x2Scale(d) - innerPad)
+					  .attr('height', hPos)
+					  .attr('fill', (d, i) => Object.values(sexColor)[i])
+					  .attr('opacity', .75);
+
+			     };//End for eyeIndex loop
+			     
+			 };//End features[0] === 'Eye'
+			 
+		     };//End keys.length === 2
+		     
+		 } else { resetArea(); };
+	     };
+
+	     //Update Sex horizontal function
+	     function updateSexH() {
+
+		 if (this.checked) {
+		     //Increment num checked
+		     nChecked += 1
+
+		     //Disable updateSexV
+		     document.getElementById('updateSexV').disabled = true;
+		     //Disable updateHs
+		     document.getElementById('updateHairH').disabled = true;
+		     document.getElementById('updateEyeH').disabled = true;
+
+		     feature = 'Sex';
+		     features.push(feature);
+		     key = forge(features[nChecked - 1]);
+		     keys.push(key);
+
+		     //Remove table
+		     d3.select('table').remove();
+
+		     if (keys.length === 1) {
+			 dataSex = getValues1(freqByFeature(keys, data));
+
+			 let dataSexCum = []
+			 dataSex.reduce((a, b, i) => dataSexCum[i] = a + b, 0);
+
+			 let sexObj = []
+			 dataSex.map((d, i) => sexObj.push({'sex': Sex[i], 'freq': d}));
+
+			 dataUpdate = sexObj;
+
+			 //Labels
+			 let sexLabel = container.selectAll('text')
+						 .data(dataUpdate).enter()
+						 .append('text')
+						 .attr('class', 'lbl')
+						 .attr('id', d => 'label' + d.sex)
+						 .style('text-anchor', 'middle')
+						 .attr('x', (d, i) => - yScale(dataSexCum[i] - d.freq) - yScale(d.freq) / 2)
+						 .attr('y', -margin.top / 4)
+						 .attr('transform', 'rotate(-90)')
+						 .text(d => d.sex);
+			 
+			 //Title
+			 let sexTitle = container.append('text')
+						 .attr('class', 'title')
+						 .attr('text-anchor', 'middle')
+						 .attr('x', - height / 2)
+						 .attr('y', - margin.left / 2)
+						 .attr('transform', 'rotate(-90)')
+						 .text('Sex');
+
+			 //Redraw table
+			 tabulate(dataUpdate, ['sex', 'freq']);
+
+			 //Update selection
+			 let selection = container.selectAll('.tile').data(dataUpdate)
+						  .attr('id', d => 'sex' + d.sex)
+						  .attr('height', d => yScale(d.freq) - innerPad)
+						  .attr('fill', (d, i) => Object.values(sexColor)[i]);
+
+			 //Enter selction
+			 selection.enter()
+				  .append('rect')
+				  .attr('class', 'tile')
+				  .attr('id', d => 'sex' + d.sex)
+				  .attr('x', 0)
+				  .attr('y', (d, i) => yScale(dataSexCum[i] - d.freq))
+				  .attr('width', width - innerPad)
+				  .attr('height', d => yScale(d.freq) - innerPad)
+				  .attr('fill', (d, i) => Object.values(sexColor)[i])
+				  .attr('opacity', .75);
+
+			 //Exit selection
+			 selection.exit().remove();
+
+		     } else if (keys.length === 2) {
+
+			 if (features[0] === 'Hair') {
+			     dataSex = getValues2(freqByFeature(keys, data));
+
+			     //Redraw table
+			     let dataDraw = freqByFeature(keys, data);
+			     let dataTb = tabMass(dataDraw, 'Hair', 'Sex');
+			     tabulate(dataTb, ['Hair', 'Sex', 'Freq']);
+
+			     for (let hairIndex = 0; hairIndex < dataSex.length; hairIndex++) {
+
+				 let idSelector = '#hair' + Hair[hairIndex];
+				 let dataSelector = dataSex[hairIndex];
+				 let dataMerge = dataSelector[Hair[hairIndex]];
+				 let y2Scale = d3.scaleLinear()
+						 .domain([0, dataSelector[Hair[hairIndex]].reduce((a, b) => a + b)])
+						 .rangeRound([0, height]);
+
+				 let xPos = d3.select('' + idSelector).attr('x');
+				 let wPos = d3.select('' + idSelector).attr('width');
+
+				 if (hairIndex === 0) {
+
+				     let sexTitle = container.append('text')
+							     .attr('class', 'title')
+							     .attr('text-anchor', 'middle')
+							     .attr('x', - height / 2)
+							     .attr('y', - margin.left / 2)
+							     .attr('transform', 'rotate(-90)')
+							     .text('Sex');
+				 };
+				 
+				 //Update selection
+				 let selection = container.selectAll('' + idSelector)
+							  .data(dataMerge)
+							  .attr('class', 'hair' + Hair[hairIndex])
+							  .attr('id', 'sex' + Sex[0])
+							  .attr('height', d => y2Scale(d) - innerPad)
+							  .attr('fill', (d, i) => Object.values(sexColor)[i]);
+
+				 selection.enter().append('rect')
+					  .attr('class', 'hair' + Hair[hairIndex])
+					  .attr('id', (d, i) => 'sex' + Sex[i])
+					  .attr('x', xPos)
+					  .attr('y', (d, i) => y2Scale(dataMerge.slice(0, i).reduce((a, b) => a + b)))
+					  .attr('width', wPos)
+					  .attr('height', d => y2Scale(d) - innerPad)
+					  .attr('fill', (d, i) => Object.values(sexColor)[i])
+					  .attr('opacity', .75);
+
+			     };//End for loop
+			     
+			 } else if (features[0] === 'Eye') {
+			     dataSex = getValues2(freqByFeature(keys, data));
+
+			     //Redraw table
+			     let dataDraw = freqByFeature(keys, data);
+			     let dataTb = tabMass(dataDraw, 'Eye', 'Sex');
+			     tabulate(dataTb, ['Eye', 'Sex', 'Freq']);
+
+			     for (let eyeIndex = 0; eyeIndex < dataSex.length; eyeIndex++) {
+
+				 let idSelector = '#eye' + Eye[eyeIndex];
+				 let dataSelector = dataSex[eyeIndex];
+				 let dataMerge = dataSelector[Eye[eyeIndex]];
+				 let y2Scale = d3.scaleLinear()
+						 .domain([0, dataSelector[Eye[eyeIndex]].reduce((a, b) => a + b)])
+						 .rangeRound([0, height]);
+
+				 let xPos = d3.select('' + idSelector).attr('x');
+				 let wPos = d3.select('' + idSelector).attr('width');
+
+				 if (eyeIndex === 0) {
+
+				     let sexTitle = container.append('text')
+							     .attr('class', 'title')
+							     .attr('text-anchor', 'middle')
+							     .attr('x', - height / 2)
+							     .attr('y', - margin.left / 2)
+							     .attr('transform', 'rotate(-90)')
+							     .text('Sex');
+
+				 };
+				 
+				 //Update selection
+				 let selection = container.selectAll('' + idSelector)
+							  .data(dataMerge)
+							  .attr('class', 'eye' + Eye[eyeIndex])
+							  .attr('id', 'sex' + Sex[0])
+							  .attr('height', d => y2Scale(d) - innerPad)
+							  .attr('fill', (d, i) => Object.values(sexColor)[i]);
+
+				 selection.enter().append('rect')
+					  .attr('class', 'eye' + Eye[eyeIndex])
+					  .attr('id', (d, i) => 'sex' + Sex[i])
+					  .attr('x', xPos)
+					  .attr('y', (d, i) => y2Scale(dataMerge.slice(0, i).reduce((a, b) => a + b)))
+					  .attr('width', wPos)
+					  .attr('height', d => y2Scale(d) - innerPad)
+					  .attr('fill', (d, i) => Object.values(sexColor)[i])
+					  .attr('opacity', .75);
+
+			     };//End for loop
+			     
+			 };//End features[0] = 'Eye'
+			 
+		     };//End keys.length === 2
+		     
+		 } else { resetArea(); };
+	     };
+
+	     document.getElementById("reset").addEventListener('click', resetArea, false);
+	     
+	     document.getElementById("updateHairV").addEventListener('change', updateHairV, false);
+	     document.getElementById("updateHairH").addEventListener('change', updateHairH, false);
+	     document.getElementById("updateEyeV").addEventListener('change', updateEyeV, false);
+	     document.getElementById("updateEyeH").addEventListener('change', updateEyeH, false);
+	     document.getElementById("updateSexV").addEventListener('change', updateSexV, false);
+	     document.getElementById("updateSexH").addEventListener('change', updateSexH, false);
+
+	 });
+	</script>
+    </body>
+</html>
