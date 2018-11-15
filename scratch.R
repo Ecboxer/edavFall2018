@@ -11,9 +11,4 @@ n2 <- nPlot(height ~ Seed,
             data = Loblolly,
             type = 'multiBarChart')
 n2
-
-#Leaflet of quakes
-map1 <- Leaflet$new()
-map1$tileLayer()
-map1$setView(c(mean(quakes$lat), mean(quakes$long)), zoom = 13)
-map1
+View(Loblolly)

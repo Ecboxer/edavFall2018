@@ -2,6 +2,7 @@
 title: 'Homework 2'
 author: 'Eric Boxer UNI ecb2198'
 date: 'Sept 30, 2018'
+always_allow_html: yes
 output: pdf_document
 ---
 
@@ -181,6 +182,11 @@ Draw four scatterplots of `tip_amount` vs. `far_amount` with the following varia
 (a) Points with alpha blending
 
 ```{r}
+colnames(yellow_subset2) <- c('id', 'pickup', 'dropoff',
+                             'passenger', 'dist', 'pu', 'do',
+                             'ratecode', 'store', 'payment',
+                             'fare_amount', 'extra', 'mta',
+                             'imp', 'tip_amount', 'tolls', 'total')
 yellow_subset %>%
   ggplot(mapping = aes(tip_amount, fare_amount)) +
   geom_point(alpha = .25) +
@@ -197,7 +203,7 @@ yellow_subset %>%
   geom_density_2d(color = 'blue') +
   xlab('Tip') + ylab('Fare') +
   ggtitle('NYC Taxi Cabs, June 2018') +
-  xlim(c(0, 5)) + ylim(c(0, 30))
+  xlim(c(6, 20))
 ```
 
 (c) Hexagonal heatmap of bin counts
@@ -208,7 +214,7 @@ yellow_subset %>%
   geom_hex(bins = 25) +
   xlab('Tip') + ylab('Fare') +
   ggtitle('NYC Taxi Cabs, June 2018') +
-  xlim(c(0, 13)) + ylim(c(0, 50)) +
+  xlim(c(-1, 13)) + ylim(c(0, 50)) +
   scale_fill_gradient(low = '#a1d99b', high = '#00441b')
 ```
 
@@ -220,7 +226,7 @@ yellow_subset %>%
   geom_bin2d(bins = 20) +
   xlab('Tip') + ylab('Fare') +
   ggtitle('NYC Taxi Cabs, June 2018') +
-  xlim(c(0, 15)) + ylim(c(0, 60)) +
+  xlim(c(-1, 15)) + ylim(c(0, 60)) +
   scale_fill_gradient(low = '#a1d99b', high = '#00441b')
 ```
 
@@ -228,7 +234,7 @@ For all, adjust parameters to the levels that provide the best views of the data
 
 (e) Describe noteworthy features of the data, using the "Movie ratings" example on page 82 (last page of Section 5.3) as a guide.  
 
-From the two scatter plots we can see that there were many rides with a low fare, < 20, and no tip. There were also many low fare rides with a low tip and where the fare and tip had a linear relationship. This is discrenible from the dark line in the first plot, the density curves in the second, and the high counts of the two heatmaps for low fare and low tip. From the first plot we can see a few outlier rides, with very high fare and zero tip or with high fare and tip. There were no rides with a low fare and a very high tip and many, but not all, of the high fare rides also had a large tip. Most rider are for a low fare and little to no tip, from the density curves.
+From the two scatter plots we can see that there were many rides with a low fare, < 20, and no tip. There were also many low fare rides with a low tip and where the tip was the same amount, about $6. This is discernible from the dark vertical lines in the first plot and the high counts of the two heatmaps for low fare and low tip. From the first plot we can see a few outlier rides, with very high fare and zero tip or with high fare and tip. There were no rides with a low fare and a very high tip and many, but not all, of the high fare rides also had a large tip. Most rides are for a low fare and little to no tip. In the density plot of high tip rides we see a bit of a concentration at the $10 tip amount and a linear relationship between tip and fare. This linear relationship is evident in the heatmaps as well, but with strong concentrations at the tip amounts of zero and six for a wide range of fares.
 
 ### 4. Olive Oil
 
@@ -267,4 +273,93 @@ Data: `wine` dataset in **pgmm** package
 
 (a) Use parallel coordinate plots to explore how the variables separate the wines by `Type`. Present the version that you find to be most informative. You do not need to include all of the variables.
 
+```{r}
+library(pgmm)
+data(wine)
+library(plotly)
+p <- wine %>% 
+  plot_ly(type = 'parcoords',
+             line = list(color = ~ Type),
+             dimensions = list(
+               list(range = c(min(wine$Alcohol), max(wine$Alcohol)),
+                    label = 'Alchohol',
+                    values = ~ Alcohol),
+               list(range = c(min(wine$`Sugar-free Extract`), max(wine$`Sugar-free Extract`)),
+                    label = 'Sugar-free Extract',
+                    values = ~`Sugar-free Extract`),
+               list(range = c(min(wine$`Fixed Acidity`), max(wine$`Fixed Acidity`)),
+                    label = 'Fixed Acidity',
+                    values = ~`Fixed Acidity`),
+               list(range = c(min(wine$`Tartaric Acid`), max(wine$`Tartaric Acid`)),
+                    label = 'Tartaric Acid',
+                    values = ~`Tartaric Acid`),
+               list(range = c(min(wine$`Malic Acid`), max(wine$`Malic Acid`)),
+                    label = 'Malic Acid',
+                    values = ~`Malic Acid`),
+               list(range = c(min(wine$`Uronic Acids`), max(wine$`Uronic Acids`)),
+                    label = 'Uronic Acids',
+                    values = ~`Uronic Acids`),
+               list(range = c(min(wine$pH), max(wine$pH)),
+                    label = 'pH',
+                    values = ~pH),
+               list(range = c(min(wine$Ash), max(wine$Ash)),
+                    label = 'Ash',
+                    values = ~Ash),
+               list(range = c(min(wine$`Alcalinity of Ash`), max(wine$`Alcalinity of Ash`)),
+                    label = 'Alcalinity of Ash',
+                    values = ~`Alcalinity of Ash`),
+               list(range = c(min(wine$Potassium), max(wine$Potassium)),
+                    label = 'Potassium',
+                    values = ~Potassium),
+               list(range = c(min(wine$Calcium), max(wine$Calcium)),
+                    label = 'Calcium',
+                    values = ~Calcium),
+               list(range = c(min(wine$Magnesium), max(wine$Magnesium)),
+                    label = 'Magnesium',
+                    values = ~Magnesium),
+               list(range = c(min(wine$Phosphate), max(wine$Phosphate)),
+                    label = 'Phosphate',
+                    values = ~Phosphate),
+               list(range = c(min(wine$Chloride), max(wine$Chloride)),
+                    label = 'Chloride',
+                    values = ~Chloride),
+               list(range = c(min(wine$`Total Phenols`), max(wine$`Total Phenols`)),
+                    label = 'Total Phenols',
+                    values = ~`Total Phenols`),
+               list(range = c(min(wine$Flavanoids), max(wine$Flavanoids)),
+                    label = 'Flavanoids',
+                    values = ~Flavanoids),
+               list(range = c(min(wine$`Non-flavanoid Phenols`), max(wine$`Non-flavanoid Phenols`)),
+                    label = 'Non-flavanoid Phenols',
+                    values = ~`Non-flavanoid Phenols`),
+               list(range = c(min(wine$`Color Intensity`), max(wine$`Color Intensity`)),
+                    label = 'Color Intensity',
+                    values = ~`Color Intensity`),
+               list(range = c(min(wine$Hue), max(wine$Hue)),
+                    label = 'Hue',
+                    values = ~ Hue),
+               list(range = c(min(wine$Glycerol), max(wine$Glycerol)),
+                    label = 'Glycerol',
+                    values = ~Glycerol),
+               list(range = c(min(wine$`Total Nitrogen`), max(wine$`Total Nitrogen`)),
+                    label = 'Total Nitrogen',
+                    values = ~`Total Nitrogen`),
+               list(range = c(min(wine$Methanol), max(wine$Methanol)),
+                    label = 'Methanol',
+                    values = ~ Methanol)
+               )
+             )
+tmpFile <- tempfile(fileext = ".png")
+orca(p, file = tmpFile)
+wine$Type <- recode(wine$Type,
+                    '1' = 'Barolo',
+                    '2' = 'Grignolino',
+                    '3' = 'Barbera')
+```
+
 (b) Explain what you discovered.
+
+Barbera wines have high levels of tartaric, uronic and malic acids, realtive to Grignolino and Barolo.  Grignolino and Barolo wines have similar levels of minerals for the most part, although Grignolino wines may exhibit greater variance in their amounts.  
+For some measures, wines exhibit a lot of variance within their range; pH (but only between 2.95 and 3.65), tartaric acid, non-flavanoid phenols. For others there is greater concentration of values; chloride and ash.  
+The Barolo wines have the most alcohol and were among the lowest amounts of calcium and the acids. In contrast, the Grignolino wines have the lowest alcohol and were in the low to middle range of those measurements.  
+Measures which show clear separation between the three types of wine are alcohol, flavanoids and color intensity. These sould probably be easier to detect than something like calcium, which probably makes the job of wine tasters easier. Noone has to go around saying,"Mmmm, the intense malic acid notes assure me that this is a Barbera, but the chloride is not as muted as I am accustomed to."

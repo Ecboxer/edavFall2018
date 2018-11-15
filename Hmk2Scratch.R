@@ -129,6 +129,11 @@ mod2 <- lm(collegeGrad~poverty, data = MplsDemo)
 coef(mod2)
 
 # 3 Taxis
+colnames(yellow_subset) <- c('id', 'pickup', 'dropoff',
+                             'passenger', 'dist', 'pu', 'do',
+                             'ratecode', 'store', 'payment',
+                             'fare_amount', 'extra', 'mta',
+                             'imp', 'tip_amount', 'tolls', 'total')
 # a
 yellow_subset %>%
   ggplot(mapping = aes(tip_amount, fare_amount)) +
@@ -143,7 +148,7 @@ yellow_subset %>%
   geom_density_2d(color = 'blue') +
   xlab('Tip') + ylab('Fare') +
   ggtitle('NYC Taxi Cabs, June 2018') +
-  xlim(c(0, 5)) + ylim(c(0, 30))
+  xlim(c(6, 20))
 
 # c
 yellow_subset %>%
@@ -151,7 +156,7 @@ yellow_subset %>%
   geom_hex(bins = 25) +
   xlab('Tip') + ylab('Fare') +
   ggtitle('NYC Taxi Cabs, June 2018') +
-  xlim(c(0, 13)) + ylim(c(0, 50)) +
+  xlim(c(-1, 13)) + ylim(c(0, 50)) +
   scale_fill_gradient(low = '#a1d99b', high = '#00441b')
 
 # d
@@ -160,7 +165,7 @@ yellow_subset %>%
   geom_bin2d(bins = 20) +
   xlab('Tip') + ylab('Fare') +
   ggtitle('NYC Taxi Cabs, June 2018') +
-  xlim(c(0, 15)) + ylim(c(0, 60)) +
+  xlim(c(-1, 15)) + ylim(c(0, 60)) +
   scale_fill_gradient(low = '#a1d99b', high = '#00441b')
 
 # 4 Olive Oil
@@ -179,9 +184,88 @@ legend("bottomleft",
 
 # 5 Wine
 library(pgmm)
-library(parcoords)
+data(wine)
 wine$Type <- recode(wine$Type,
                     '1' = 'Barolo',
                     '2' = 'Grignolino',
                     '3' = 'Barbera')
-View(wine)
+library(plotly)
+p <- wine %>% 
+  plot_ly(type = 'parcoords',
+             line = list(color = ~ Type),
+             dimensions = list(
+               list(range = c(min(wine$Alcohol), max(wine$Alcohol)),
+                    label = 'Alchohol',
+                    values = ~ Alcohol),
+               list(range = c(min(wine$`Sugar-free Extract`), max(wine$`Sugar-free Extract`)),
+                    label = 'Sugar-free Extract',
+                    values = ~`Sugar-free Extract`),
+               list(range = c(min(wine$`Fixed Acidity`), max(wine$`Fixed Acidity`)),
+                    label = 'Fixed Acidity',
+                    values = ~`Fixed Acidity`),
+               list(range = c(min(wine$`Tartaric Acid`), max(wine$`Tartaric Acid`)),
+                    label = 'Tartaric Acid',
+                    values = ~`Tartaric Acid`),
+               list(range = c(min(wine$`Malic Acid`), max(wine$`Malic Acid`)),
+                    label = 'Malic Acid',
+                    values = ~`Malic Acid`),
+               list(range = c(min(wine$`Uronic Acids`), max(wine$`Uronic Acids`)),
+                    label = 'Uronic Acids',
+                    values = ~`Uronic Acids`),
+               list(range = c(min(wine$pH), max(wine$pH)),
+                    label = 'pH',
+                    values = ~pH),
+               list(range = c(min(wine$Ash), max(wine$Ash)),
+                    label = 'Ash',
+                    values = ~Ash),
+               list(range = c(min(wine$`Alcalinity of Ash`), max(wine$`Alcalinity of Ash`)),
+                    label = 'Alcalinity of Ash',
+                    values = ~`Alcalinity of Ash`),
+               list(range = c(min(wine$Potassium), max(wine$Potassium)),
+                    label = 'Potassium',
+                    values = ~Potassium),
+               list(range = c(min(wine$Calcium), max(wine$Calcium)),
+                    label = 'Calcium',
+                    values = ~Calcium),
+               list(range = c(min(wine$Magnesium), max(wine$Magnesium)),
+                    label = 'Magnesium',
+                    values = ~Magnesium),
+               list(range = c(min(wine$Phosphate), max(wine$Phosphate)),
+                    label = 'Phosphate',
+                    values = ~Phosphate),
+               list(range = c(min(wine$Chloride), max(wine$Chloride)),
+                    label = 'Chloride',
+                    values = ~Chloride),
+               list(range = c(min(wine$`Total Phenols`), max(wine$`Total Phenols`)),
+                    label = 'Total Phenols',
+                    values = ~`Total Phenols`),
+               list(range = c(min(wine$Flavanoids), max(wine$Flavanoids)),
+                    label = 'Flavanoids',
+                    values = ~Flavanoids),
+               list(range = c(min(wine$`Non-flavanoid Phenols`), max(wine$`Non-flavanoid Phenols`)),
+                    label = 'Non-flavanoid Phenols',
+                    values = ~`Non-flavanoid Phenols`),
+               list(range = c(min(wine$`Color Intensity`), max(wine$`Color Intensity`)),
+                    label = 'Color Intensity',
+                    values = ~`Color Intensity`),
+               list(range = c(min(wine$Hue), max(wine$Hue)),
+                    label = 'Hue',
+                    values = ~ Hue),
+               list(range = c(min(wine$Glycerol), max(wine$Glycerol)),
+                    label = 'Glycerol',
+                    values = ~Glycerol),
+               list(range = c(min(wine$`Total Nitrogen`), max(wine$`Total Nitrogen`)),
+                    label = 'Total Nitrogen',
+                    values = ~`Total Nitrogen`),
+               list(range = c(min(wine$Methanol), max(wine$Methanol)),
+                    label = 'Methanol',
+                    values = ~ Methanol)
+               )
+             )
+chart_link = api_create(p, filename = 'parcoords-basic')
+chart_link
+
+wine %>% 
+  filter(`Uronic Acids` > 1.7)
+wine %>% 
+  filter(`Total Nitrogen` > 500)
