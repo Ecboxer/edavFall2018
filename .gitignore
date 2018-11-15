@@ -2,4 +2,8 @@ resources/
 .Rproj.user
 .RData
 .Rhistory
+Hmk2Ans_cache/
+Hmk3-Fall18_cache/
+Hmk3-Fall18_files/
+cache/
 *.Rproj
