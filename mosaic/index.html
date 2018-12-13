@@ -41,14 +41,15 @@
 			     .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
 	 //Create initial mosaic area
-	 const mosaicInit = container.append('rect')
-				     .attr('class', 'tile')
-				     .attr('id', 'init')
-				     .attr('x', 0)
-				     .attr('y', 0)
-				     .attr('width', width - innerPad)
-				     .attr('height', height - innerPad)
-				     .attr('opacity', .75);
+	 function mosaicInit() {
+	     const mosaicI = container.append('rect')
+				      .attr('class', 'tile init')
+				      .attr('x', 0)
+				      .attr('y', 0)
+				      .attr('width', width - innerPad)
+				      .attr('height', height - innerPad)
+				      .attr('opacity', .75);
+	 };
 
 	 //Uppercase first letter
 	 function toUpper(string) {
@@ -89,7 +90,7 @@
 	     return table;
 	 };
 
-	 //Massage data into form for tabulate
+	 //Massage data into form for tabulate, with two labels
 	 function tabMass(data, label1, label2) {
 	     let a = [];
 	     for (f1 in Object.keys(data)) {
@@ -109,7 +110,7 @@
 	 const Eye = ['Brown', 'Blue', 'Hazel', 'Green'];
 	 const Sex = ['Male', 'Female'];
 
-	 //Colors to coincide with feature values
+	 //Colors for feature values
 	 const hairColor = {'Black': '#000',
 			    'Brown': '#591600',
 			    'Red': '#FF0000',
@@ -130,6 +131,10 @@
 	     };
 	 }).then(function (data) {
 
+	     //Draw intitial mosaic
+	     mosaicInit();
+	     
+	     //Draw initial table
 	     tabulate(data, ['Hair', 'Eye', 'Sex', 'Freq']);
 
 	     //Hard coded total frequency
@@ -176,7 +181,7 @@
 	     };
 
 	     //Get values from depth = 3 Object
-	     //***************WIP****************** copied depth = 2
+	     //***************WIP****************** Not in use
 	     function getValues3 (object) {
 		 let a = [];
 		 for (let k in object) {
@@ -220,6 +225,7 @@
 	     
 	     function freqByFeature(keys, data) {
 		 //Returns obj of freq from data grouped by keys
+		 //Simplifies calling freqByFeatureN for N = 1, 2, 3
 		 if (keys.length === 1) {
 		     return freqByFeature1(keys[0], data);
 		 } else if (keys.length === 2) {
@@ -229,7 +235,7 @@
 		 };
 	     };
 
-	     //Declare variables for update functions
+	     //Declare initial variables for update functions
 	     let dataUpdate = data;
 	     let feature = 'None';
 	     let features = [];
@@ -239,33 +245,28 @@
 
 	     //Reset mosaic area
 	     function resetArea() {
+		 
 		 //Reset counters
-		 nChecked = 0;
 		 features = [];
 		 keys = [];
+		 nChecked = 0;
 
 		 //Remove tiles
 		 container.selectAll('rect')
 			  .remove();
 
+		 //Redraw initial mosaic area
+		 mosaicInit();
+		 
 		 //Remove table
 		 d3.select('table').remove();
-		 //Redraw table
+		 
+		 //Redraw initial table
 		 tabulate(data, ['Hair', 'Eye', 'Sex', 'Freq']);
 
-		 //Remove Labels
+		 //Remove labels
 		 d3.selectAll('text').remove();
-
-		 //Create initial mosaic area
-		 const mosaicInit = container.append('rect')
-					     .attr('class', 'tile')
-					     .attr('id', 'init')
-					     .attr('x', 0)
-					     .attr('y', 0)
-					     .attr('width', width - innerPad)
-					     .attr('height', height - innerPad)
-					     .attr('opacity', .75);
-
+		 
 		 //Uncheck all inputs
 		 document.getElementById('updateHairV').checked = false;
 		 document.getElementById('updateHairH').checked = false;
@@ -282,6 +283,19 @@
 		 document.getElementById('updateSexV').disabled = false;
 		 document.getElementById('updateSexH').disabled = false;
 
+	     };
+
+	     //Generic update function
+	     function updateFeature(feat, direction) {
+		 //Updates the mosaic with feat
+		 //Splits on direction H or V
+		 if (this.checked) {
+
+		     //Increment number checked
+		     nChecked += 1
+
+		     
+		 };//End if this.checked
 	     };
 	     
 	     //Update Hair vertical function

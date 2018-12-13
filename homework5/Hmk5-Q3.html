@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+	<meta charset="utf-8">
+	<title>Hmk5 Q3</title>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<style>
+	 text {
+	     pointer-events: none;
+	 }
+	</style>
+    </head>
+    <body>
+	
+	<h3>Click anywhere to add a point.</h3>
+
+	
+	<script type="text/javascript">
+
+	 // Width and height of svg
+	 var w = 600;
+	 var h = 400;
+	 var padding = 30;
+	 
+	 // axis min / max
+	 var xmin = -50;
+	 var xmax = 50;
+	 var ymin = -30;
+	 var ymax = 30;
+
+	 //Circle Attributes
+	 const rad = 6;
+	 const circFill = '#f33';
+
+	 
+	 //		Scale functions
+	 const xScale = d3.scaleLinear()
+			  .domain([xmin, xmax])
+			  .range([0, w]);
+
+	 const yScale = d3.scaleLinear()
+			  .domain([ymin, ymax])
+			  .range([h, 0]);
+
+	 //    Define X axis and Y axis
+	 function xAxis (svg) {
+	     svg.append('g')
+		.attr('transform', 'translate(' + padding + ',' + (h / 2 + padding) + ')')
+		.call(d3.axisBottom(xScale));
+	 };
+	 
+	 function yAxis (svg) {
+	     svg.append('g')
+		.attr('transform', 'translate(' + (w / 2 + padding) + ',' + padding + ')')
+		.call(d3.axisLeft(yScale).tickValues(d3.range(-30, 31, 10)));    
+	 };
+
+	 //    Create SVG element		
+	 const container = d3.select('body').append('svg')
+			     .attr('width', w + padding * 2)
+			     .attr('height', h + padding * 2);
+	 
+	 //    Create axes
+	 xAxis(container);
+	 yAxis(container);
+	 
+	 //    Create blank text element
+	 let textX = container.append('text')
+			      .attr('x', 5)
+			      .attr('y', h + 40)
+			      .attr('font-family', 'sans-serif')
+			      .attr('font-size', 16);
+
+	 let textY = container.append('text')
+			      .attr('x', 5)
+			      .attr('y', h + 60)
+			      .attr('font-family', 'sans-serif')
+			      .attr('font-size', 16);
+	 
+	 //    Click behavior	
+	 function drawCircle(x, y, size, fill) {
+	     container.append('circle')
+		      .attr('cx', x)
+		      .attr('cy', y)
+		      .attr('r', size)
+		      .attr('fill', fill);
+	 };
+
+	 const nf = d3.format('.2f');
+
+	 //Initialize counts
+	 let xSum = 0; //Sum of xCoords
+	 let ySum = 0; //Sum of yCoords
+	 
+	 function updateText(x, y) {
+	     const xCoord = xScale.invert(x - w / 2 - padding) + 50;
+	     const yCoord = yScale.invert(y - h / 2 - padding) - 30;
+	     xSum += xCoord;
+	     ySum += yCoord;
+
+	     const n = d3.selectAll('circle')._groups[0].length;
+	     
+	     textX.text('X coordinate mean: ' + nf(xSum / n));
+	     textY.text('Y coordinate mean: ' + nf(ySum / n));
+	 };
+
+	 container.on('click', function () {
+	     const coords = d3.mouse(this);
+	     drawCircle(coords[0], coords[1], rad, circFill);
+	     updateText(coords[0], coords[1]);
+	 });
+
+	</script>
+    </body>
+</html>

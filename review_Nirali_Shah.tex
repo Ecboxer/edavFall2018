@@ -1,0 +1,43 @@
+\documentclass{article}
+\usepackage{url}
+
+\begin{document}
+\section{Formatting Tips}
+
+When writing text chunks it might improve legibility to format headings with '\#' markers. For example, 'Introduction \textbackslash n' could be written as '\# \# \# Introduction \textbackslash n' and would render 'Introduction' as a heading.
+
+When importing libraries in RMarkdown you can suppress conflicts by including 'messages=FALSE' when writing your code chunks.
+
+If you want to start a newline in a markdown document you must either leave a blank line between lines or end your line with two space characters. For example, in your normalisation scale you could write 'Age Class Normalised Contribution \textbackslash s \textbackslash s \textbackslash n $>18$ Male ...'
+
+On page 40, your Calorie Consumption line chart runs over into page 41. Perhaps you opted to knit your RMarkdown to pdf for printing but knitting to html would alleviate some spacing issues.
+
+\section{Graph Suggestions}
+Including a graph in which you examine the seasonality of calories might be interesting. You could go about that by plotting the data for each year superimposed or faceted. A more involved method could fit a time series model and then difference with the original to determine if there are seasonal effects. On first glance it looked like every year ends with a decrease in calories, which you could make reference to when you write that 2011 and 2015 experience particularly sharp drops.
+
+Perhaps you could introduce recommended levels of calories and nutrients in your text and maybe into your graphs, too. For example, if the recommended iron consumption for an adult is 50 000 units then that would provide context for that 'Home Food Trends' line graph.
+
+You might want to consider including some text in your exploratory data analysis section, just to point out where a finding is of particular significance, or to explain why you chose to look at House IDs IAP...301 and 302 after your grouped bar charts.
+
+On page 30, you switch the households you are examining, which I did not catch immediately. Including some text or otherwise mentioning this could be helpful.
+
+In your second Presentation chart it was not clear to me why you singled out milk and milk products as being prone to variability. Cereals, non-veg and oils seemed to experience at least as much variability.
+
+For the third Presentation chart, increasing the line width or otherwise improving the visibility of the lines could be useful. On the computer screen they show up well enough but I can imagine it would be hard to distinguish between the two colors when projected.
+
+For this comment I should preface by saying that I have an old, slow laptop. Your interactive components crashed my computer. From the code it looks like you created a scatter plot for the first, so if you want to look out for people with slow internet or old computers I can make two recommendations. One, take a random sample of the data, maybe one-tenth, and just render that. Two, stay away from graph forms that display every observation uniquely such as scatter plots and opt for aggregative graphs, like histograms.
+
+\section{Text Fixes}
+Under the third paragraph of the 'Description of Data' you list total iron consumption twice.
+
+It might be a good idea to have one person go through and make sure that words such as 'normalisation' are spelled uniformly throughout the document, instead of switching between the British and the American spellings.
+
+\section{Other}
+As of this review the Github repo linked in the report consists of only a README file. You might think about including at least the RMarkdown and pdf files.
+
+In your conclusion you reference that cleaning data was an obstacle to mapping the data, I would have liked to read more, maybe in a previous section, about that process. You did mention several techniques when writing about 'normalisation' but not the actual implementation.
+
+\section{Summary}
+Your choice of topic was great! It was also very ambitious to opt for messy, detailed data and try to present it in an engaging way. Maybe there could have been more space devoted to explaining the context behind some of the trends, such as an increase in purchased food coinciding with the intrusion of fast food chains into India.
+
+\end{document}

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+	<meta charset="utf-8">
+	<title>Hmk5 Q4</title>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<style>
+	 body {
+	     font-family: sans-serif;
+	 }
+	 text {
+	     pointer-events: none;
+	 }
+	</style>
+    </head>
+    <body>
+
+	<div style="width: 600px">
+	    
+	    <h3>Correlation Coefficient</h3>
+	    
+	    <p>The correlation coefficient (r) is a measure of the linear relationship
+		between two variables x and y. To get a sense of the connection between the
+		appearance of points -- (x,y) pairs --  in a scatterplot and the value of r,
+		click anywhere on the graph to add points. The correlation coefficient is shown below.</p>
+	    
+	</div>
+	
+	<h3 id="cc">Two points are needed to calculate r.</h3>
+	
+	<script type="text/javascript">
+
+	 //Width and height of svg
+	 var w = 600;
+	 var h = 400;
+	 var padding = 30;
+	 
+	 // axis min / max
+	 
+	 var xmin = -50;
+	 var xmax = 50;
+	 var ymin = -30;
+	 var ymax = 30;
+	 
+	 //Circle Attributes
+	 const rad = 6;
+	 const circFill = '#f33';
+	 
+	 //		Scale functions
+	 const xScale = d3.scaleLinear()
+			  .domain([xmin, xmax])
+			  .range([0, w]);
+
+	 const yScale = d3.scaleLinear()
+			  .domain([ymin, ymax])
+			  .range([h, 0]);	 
+	 
+	 //    Define X axis and Y axis
+	 function xAxis (svg) {
+	     svg.append('g')
+		.attr('transform', 'translate(' + padding + ',' + (h / 2 + padding) + ')')
+		.call(d3.axisBottom(xScale));
+	 };
+	 
+	 function yAxis (svg) {
+	     svg.append('g')
+		.attr('transform', 'translate(' + (w / 2 + padding) + ',' + padding + ')')
+		.call(d3.axisLeft(yScale).tickValues(d3.range(-30, 31, 10)));    
+	 };
+
+	 //    Create SVG element		
+	 const container = d3.select('body').append('svg')
+			     .attr('width', w + padding * 2)
+			     .attr('height', h + padding * 2);
+	 
+	 //    Create axes
+	 xAxis(container);
+	 yAxis(container);
+	 
+	 //    Click behavior	
+	 function drawCircle(x, y, size, fill) {
+	     container.append('circle')
+		      .attr('cx', x)
+		      .attr('cy', y)
+		      .attr('r', size)
+		      .attr('fill', fill);
+	 };
+
+	 const nf = d3.format('.2f');
+	 
+	 function updateText() {
+	     //Number of circles
+	     const n = d3.selectAll('circle')._groups[0].length;
+
+	     //Circle selection
+	     const circles = d3.selectAll('circle')._groups[0];
+
+	     //Coordinates of circles
+	     let xCoords = [];
+	     let yCoords = [];
+
+	     for (let i = 0; i < n; i++) {
+		 xCoords.push(xScale.invert(circles[i].cx.animVal.value - w / 2 - padding) + 50);
+	     };
+
+	     for (let i = 0; i < n; i++) {
+		 yCoords.push(yScale.invert(circles[i].cy.animVal.value - h / 2 - padding) - 30);
+	     };
+
+	     //Coordinate averages
+	     const xBar = xCoords.reduce((a, b) => a + b) / n;
+	     const yBar = yCoords.reduce((a, b) => a + b) / n;
+
+	     //Centers
+	     const xCent = xCoords.map(a => a - xBar);
+	     const yCent = yCoords.map(a => a - yBar);
+	     
+	     //Construct correlation coeffient
+	     const zipped = xCent.map((d, i) => [d, yCent[i]]);
+	     const num = zipped.map(a => a[0] * a[1]).reduce((a, b) => a + b);
+	     const std_x = Math.sqrt(xCent.map(a => a ** 2).reduce((a, b) => a + b));
+	     const std_y = Math.sqrt(yCent.map(a => a ** 2).reduce((a, b) => a + b));
+	     const denom = std_x * std_y;
+	     const r = num / denom;
+	     
+	     console.log([r, num, denom]);
+
+	     //Redraw correlation coefficient heading
+	     if (n > 1) {
+		 d3.select('#cc').text('r = ' + nf(r)); // Getting r greater than 1!!!
+	     };
+	 };
+
+	 container.on('click', function () {
+	     const coords = d3.mouse(this);
+	     drawCircle(coords[0], coords[1], rad, circFill);
+	     updateText();
+	 });
+
+	</script>
+    </body>
+</html>
